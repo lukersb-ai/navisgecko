@@ -1,0 +1,31 @@
+'use server'
+
+import fs from 'fs';
+import path from 'path';
+
+export async function getTranslationsList() {
+  try {
+    const plPath = path.join(process.cwd(), 'messages/pl.json');
+    const enPath = path.join(process.cwd(), 'messages/en.json');
+    return {
+      pl: JSON.parse(fs.readFileSync(plPath, 'utf8')),
+      en: JSON.parse(fs.readFileSync(enPath, 'utf8'))
+    };
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+}
+
+export async function saveTranslationsList(plData: any, enData: any) {
+  try {
+    const plPath = path.join(process.cwd(), 'messages/pl.json');
+    const enPath = path.join(process.cwd(), 'messages/en.json');
+    fs.writeFileSync(plPath, JSON.stringify(plData, null, 2), 'utf8');
+    fs.writeFileSync(enPath, JSON.stringify(enData, null, 2), 'utf8');
+    return { success: true };
+  } catch (err) {
+    console.error(err);
+    return { success: false };
+  }
+}

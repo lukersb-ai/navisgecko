@@ -1,0 +1,78 @@
+{
+  "Navbar": {
+    "home": "Strona Główna",
+    "about": "Nasza Hodowla",
+    "available": "Dostępne Gekony",
+    "caresheets": "Poradniki",
+    "contact": "Kontakt"
+  },
+  "Footer": {
+    "description": "Profesjonalna hodowla najwyższej jakości gekonów. Pasja spotyka się z genetyką, by tworzyć niesamowite, zdrowe i przepiękne osobniki.",
+    "links": "Szybkie Linki",
+    "contact": "Kontakt",
+    "address": "Warszawa, Polska",
+    "phone": "+48 123 456 789",
+    "email": "kontakt@geckohaven.pl",
+    "rights": "Wszelkie prawa zastrzeżone."
+  },
+  "Home": {
+    "heroTitle": "Navis Gecko",
+    "heroSubtitle": "Pasja i Jakość",
+    "heroButton": "Zobacz dostępne gekony",
+    "aboutTitle": "Nasza Filozofia Hodowlana",
+    "breedersTitle": "Nasze gekony",
+    "breedersDesc": "Podstawa każdej wspaniałej hodowli leży w wyjątkowych genach. Przedstawiamy kilku kluczowych reprezentantów naszych linii hodowlanych."
+  },
+  "Geckos": {
+    "genderMale": "Samiec",
+    "genderFemale": "Samica",
+    "genderUnknown": "Nieznana"
+  },
+  "Available": {
+    "title": "Dostępne zwierzęta",
+    "description": "Przeglądaj naszą aktualną ofertę. Każdy osobnik jest szczegółowo opisany. Jeśli jesteś zainteresowany, kliknij \"Zapytaj\" i przejdź do formularza.",
+    "all": "Wszystkie",
+    "askPrice": "Zapytaj o cenę",
+    "statusAvailable": "DOSTĘPNY",
+    "statusReserved": "ZAREZERWOWANY",
+    "id": "ID",
+    "morph": "Odmiana",
+    "gender": "Płeć",
+    "weight": "Waga",
+    "birthDate": "Data klucia",
+    "noData": "Brak danych",
+    "details": "Szczegóły i historia",
+    "reserve": "Zapytaj",
+    "reserved": "Zarezerwowany"
+  },
+  "Contact": {
+    "pageTitle": "Skontaktuj się z nami",
+    "formLoading": "Ładowanie formularza...",
+    "successTitle": "Wiadomość wysłana!",
+    "successDesc": "Dziękujemy za kontakt. Odpowiemy na Twojego maila najszybciej jak to możliwe (zazwyczaj w ciągu 24 godzin).",
+    "sendAnother": "Wyślij kolejną wiadomość",
+    "nameLabel": "Imię i Nazwisko / Pseudonim",
+    "namePlaceholder": "Jan Kowalski",
+    "emailLabel": "Adres E-mail",
+    "emailPlaceholder": "jan@example.com",
+    "geckoLabel": "Zainteresowany gekonem (ID / Odmiana) - Opcjonalnie",
+    "geckoPlaceholder": "np. LG-0104",
+    "messageLabel": "Twoja Wiadomość",
+    "messagePlaceholder": "Chcę zarezerwować gekona, mam kilka pytań dotyczących terrarium...",
+    "sending": "Wysyłanie...",
+    "send": "Wyślij wiadomość",
+    "errorGeneric": "Błąd połączenia. Spróbuj ponownie później."
+  },
+  "Caresheets": {
+    "pageTitle": "Wymagania i Opieka",
+    "pageDesc": "Krótkie i merytoryczne poradniki dotyczące hodowli naszych podopiecznych.",
+    "tempTitle": "Temperatura i oświetlenie",
+    "tempDesc": "Wymagania cieplne, wyspa ciepła, cykl dobowy...",
+    "dietTitle": "Dieta i suplementacja",
+    "dietDesc": "Najlepsze owady karmowe, dobór witamin oraz wapnia...",
+    "terrariumTitle": "Terrarium",
+    "terrariumDesc": "Wymiary docelowe, dobór podłoża i aranżacja.",
+    "handlingTitle": "Oswajanie i kontakt",
+    "handlingDesc": "Jak budować relacje z gekonem i unikać stresu."
+  }
+}

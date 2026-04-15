@@ -1,0 +1,85 @@
+{
+  "Navbar": {
+    "home": "Home",
+    "about": "Our Breeding",
+    "available": "Available Geckos",
+    "caresheets": "Caresheets",
+    "contact": "Contact"
+  },
+  "Footer": {
+    "description": "Professional breeding of high-quality geckos. Passion meets genetics to create incredible, healthy, and beautiful animals.",
+    "links": "Quick Links",
+    "contact": "Contact Us",
+    "address": "Warsaw, Poland",
+    "phone": "+48 123 456 789",
+    "email": "kontakt@geckohaven.pl",
+    "rights": "All rights reserved."
+  },
+  "Home": {
+    "heroTitle": "Navis Gecko",
+    "heroSubtitle": "Passion & Quality",
+    "heroDesc": "We specialize in the professional breeding of high-quality leopard geckos with an emphasis on excellent conditions, great genetics, and unique morphs.",
+    "heroButton": "View Available Geckos",
+    "aboutTitle": "Our Breeding Philosophy",
+    "aboutDesc": "Our adventure with terrariums began with a pure passion for these amazing reptiles. Today, our mission is to breed healthy, strong, and beautiful individuals. At Gecko Haven, animal welfare comes first.",
+    "aboutList1": "Only healthy breeding individuals, regularly examined by veterinarians.",
+    "aboutList2": "Optimal diet, supplementation, and naturally arranged large habitats.",
+    "aboutList3": "Meticulously tracked genetics and precise matching of morphs.",
+    "aboutList4": "Professional support for future owners of our geckos.",
+    "breedersTitle": "Our Breeding Stock",
+    "breedersDesc": "The foundation of every great breeding project lies in exceptional genes. Allow us to introduce some key representatives of our breeding lines."
+  },
+  "Geckos": {
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderUnknown": "Unknown"
+  },
+  "Available": {
+    "title": "Available Geckos",
+    "description": "Browse our current offers. Each individual is described in detail. If you are interested, click \"Reserve\" and proceed to the form.",
+    "all": "All",
+    "askPrice": "Ask for price",
+    "statusAvailable": "AVAILABLE",
+    "statusReserved": "RESERVED",
+    "id": "ID",
+    "morph": "Morph",
+    "gender": "Gender",
+    "weight": "Weight",
+    "birthDate": "Hatch Date",
+    "noData": "No data",
+    "details": "Details & History",
+    "reserve": "Reserve",
+    "reserved": "Reserved"
+  },
+  "Contact": {
+    "pageTitle": "Contact Us",
+    "pageDesc": "Do you have questions about specific individuals? Want to make a reservation or learn more about gecko care? Write to us!",
+    "formLoading": "Loading form...",
+    "successTitle": "Message sent!",
+    "successDesc": "Thank you for contacting us. We will reply to your email as soon as possible (usually within 24 hours).",
+    "sendAnother": "Send another message",
+    "nameLabel": "Full Name / Nickname",
+    "namePlaceholder": "John Doe",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "john@example.com",
+    "geckoLabel": "Interested in (ID / Morph) - Optional",
+    "geckoPlaceholder": "e.g. LG-0104",
+    "messageLabel": "Your Message",
+    "messagePlaceholder": "I want to reserve a gecko, I have some questions about terrariums...",
+    "sending": "Sending...",
+    "send": "Send Message",
+    "errorGeneric": "Connection error. Try again later."
+  },
+  "Caresheets": {
+    "pageTitle": "Care Sheets",
+    "pageDesc": "Short, substantive guides on breeding and housing our animals.",
+    "tempTitle": "Temperature and Lighting",
+    "tempDesc": "Heat requirements, basking spots, and day/night cycles...",
+    "dietTitle": "Diet and Supplementation",
+    "dietDesc": "Best feeder insects, choosing vitamins, and calcium intake...",
+    "terrariumTitle": "Terrarium Setup",
+    "terrariumDesc": "Optimal enclosure size, substrate selection, and decor.",
+    "handlingTitle": "Taming and Handling",
+    "handlingDesc": "Building trust with your gecko and avoiding unnecessary stress."
+  }
+}
