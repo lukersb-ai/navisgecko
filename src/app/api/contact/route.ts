@@ -1,26 +1,32 @@
 import { NextResponse } from 'next/server';
+import nodemailer from 'nodemailer';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { name, email, geckoId, message } = body;
 
-    // Simulate delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
-    // Here we would normally send an email using Resend, Nodemailer, etc.
-    // Since the user requested to mock it for now, we just log it.
-    console.log('--- DODANO NOWE ZAPYTANIE Z FORMULARZA KONTAKTOWEGO ---');
-    console.log(`Od: ${name} (${email})`);
-    if (geckoId) {
-      console.log(`Zainteresowany gekonem: ${geckoId}`);
-    }
-    console.log(`Wiadomość:\n${message}`);
-    console.log('----------------------------------------------------');
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: 'navisgecko@gmail.com',
+      replyTo: email,
+      subject: `Nowe zapytanie od ${name} ${geckoId ? '[Gekon: ' + geckoId + ']' : ''}`,
+      text: `Masz nową wiadomość ze strony (formularz kontaktowy):\n\nOd: ${name}\nEmail: ${email}\nDotyczy gekona (ID): ${geckoId || 'Brak'}\n\nWiadomość:\n${message}`,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     return NextResponse.json({ success: true, message: 'Wiadomość została wysłana' }, { status: 200 });
   } catch (error) {
     console.error('Błąd formularza kontaktowego:', error);
-    return NextResponse.json({ success: false, message: 'Wystąpił błąd serwera.' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Wystąpił błąd serwera. Nie udało się wysłać maila.' }, { status: 500 });
   }
 }

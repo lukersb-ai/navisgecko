@@ -166,7 +166,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
                 {t('reserve')}
               </>
             ) : (
-              statusLower === 'reserved' ? t('reserved') : 'Sprzedany'
+              statusLower === 'reserved' ? t('reserved') : (locale === 'pl' ? 'Niedostępny' : 'Unavailable')
             )}
           </Link>
         </div>

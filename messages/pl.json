@@ -47,6 +47,7 @@
   },
   "Contact": {
     "pageTitle": "Skontaktuj się z nami",
+    "pageDesc": "Masz pytania dotyczące poszczególnych osobników? Chcesz dokonać rezerwacji lub dowiedzieć się więcej o opiece nad gekonami? Napisz do nas!",
     "formLoading": "Ładowanie formularza...",
     "successTitle": "Wiadomość wysłana!",
     "successDesc": "Dziękujemy za kontakt. Odpowiemy na Twojego maila najszybciej jak to możliwe (zazwyczaj w ciągu 24 godzin).",

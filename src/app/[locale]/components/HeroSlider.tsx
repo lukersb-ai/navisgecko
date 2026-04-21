@@ -39,7 +39,7 @@ export default function HeroSlider() {
           }`}
         />
       ))}
-      <div className="absolute inset-0 bg-earth-dark/60"></div>
+      <div className="absolute inset-0 bg-earth-dark opacity-50"></div>
     </div>
   );
 }

@@ -2,9 +2,9 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
-  --color-earth-dark: #1a472a; /* Żywsza, ale wciąż ciemna zieleń */
-  --color-earth-main: #337a45; /* Bardziej nasycona, żywsza zieleń */
-  --color-earth-light: #52aa68; /* Bardziej jaskrawa zieleń */
+  --color-earth-dark: #245e38; /* Umiarkowanie rozjaśniona, ładna ciemna zieleń */
+  --color-earth-main: #429c5a; /* Umiarkowanie rozjaśniona główna zieleń */
+  --color-earth-light: #64c27d; /* Przyjemna, nie za jaskrawa jasna zieleń */
   --color-earth-brown: #a86423; /* Ocieplony brąz */
   --color-earth-beige: #f4ebe0; /* Jaśniejszy beż, cieplejszy */
   --color-earth-accent: #fc8423; /* Żywszy pomarańczkowy */
@@ -15,14 +15,14 @@
 }
 
 :root {
-  --background: #fcfaf6;
-  --foreground: #1a472a;
+  --background: #fdfcfa;
+  --foreground: #245e38; 
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #142e1f;
-    --foreground: #f8f6f2;
+    --background: #1b3d28;
+    --foreground: #fcfbf9;
   }
 }
 
