@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Info, Weight, Dna, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, Info, Weight, Dna, ShoppingCart, ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
 import { categories } from '@/data/geckos';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { supabase } from '@/lib/supabase';
 import { useLocale } from 'next-intl';
 
-function GeckoCard({ gecko, locale }: { gecko: any, locale: string }) {
+function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: string, pricesRevealed?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
 
@@ -91,7 +91,7 @@ function GeckoCard({ gecko, locale }: { gecko: any, locale: string }) {
       <div className="p-6 flex-grow flex flex-col">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-2xl font-bold text-earth-dark">
-            {gecko.hidePrice 
+            {gecko.hidePrice && !pricesRevealed
               ? t('askPrice') || 'Zapytaj' 
               : (locale === 'en' 
                  ? (gecko.priceEur ? `${gecko.priceEur} EUR` : t('askPrice') || 'Ask')
@@ -181,10 +181,15 @@ export default function AvailableGeckos() {
   const [categories, setCategories] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [pricesRevealed, setPricesRevealed] = useState(false);
   const t = useTranslations('Available');
   const locale = useLocale();
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('pricesRevealed') === 'true') {
+      setPricesRevealed(true);
+    }
+    
     async function load() {
       const [gRes, cRes] = await Promise.all([
         supabase.from('geckos').select('*').order('created_at', { ascending: false }),
@@ -239,13 +244,40 @@ export default function AvailableGeckos() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredGeckos.length > 0 ? (
               filteredGeckos.map((gecko) => (
-                <GeckoCard key={gecko.id} gecko={gecko} locale={locale} />
+                <GeckoCard key={gecko.id} gecko={gecko} locale={locale} pricesRevealed={pricesRevealed} />
               ))
             ) : (
               <div className="col-span-full text-center text-earth-dark/60 py-12 border-2 border-dashed border-earth-dark/20 rounded-xl">
                 Brak gekonów w tej kategorii.
               </div>
             )}
+          </div>
+        )}
+
+        {/* Secret Padlock */}
+        {!loading && (
+          <div className="mt-16 flex justify-center opacity-20 hover:opacity-100 transition-opacity duration-300">
+            <button 
+              onClick={() => {
+                if (pricesRevealed) {
+                  setPricesRevealed(false);
+                  sessionStorage.removeItem('pricesRevealed');
+                } else {
+                  const pwd = window.prompt(locale === 'pl' ? 'Podaj hasło, aby odkryć ceny:' : 'Enter password to reveal prices:');
+                  if (pwd === (process.env.NEXT_PUBLIC_PRICE_PASSWORD || 'navis')) {
+                    setPricesRevealed(true);
+                    sessionStorage.setItem('pricesRevealed', 'true');
+                  } else if (pwd !== null) {
+                    alert(locale === 'pl' ? 'Nieprawidłowe hasło' : 'Incorrect password');
+                  }
+                }
+              }}
+              className="p-4 rounded-full hover:bg-earth-beige/50"
+              title="Secret"
+              aria-label="Secret"
+            >
+              {pricesRevealed ? <Unlock className="w-5 h-5 text-earth-dark/50" /> : <Lock className="w-5 h-5 text-earth-dark/50" />}
+            </button>
           </div>
         )}
       </div>
