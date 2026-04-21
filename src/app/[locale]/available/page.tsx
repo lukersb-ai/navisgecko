@@ -91,7 +91,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
       <div className="p-6 flex-grow flex flex-col">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-2xl font-bold text-earth-dark">
-            {gecko.hidePrice && !pricesRevealed
+            {gecko.hidePrice && (!pricesRevealed || ['sold', 'reserved'].includes(gecko.status?.toLowerCase()))
               ? t('askPrice') || 'Zapytaj' 
               : (locale === 'en' 
                  ? (gecko.priceEur ? `${gecko.priceEur} EUR` : t('askPrice') || 'Ask')
@@ -263,7 +263,7 @@ export default function AvailableGeckos() {
                   setPricesRevealed(false);
                   sessionStorage.removeItem('pricesRevealed');
                 } else {
-                  const pwd = window.prompt(locale === 'pl' ? 'Podaj hasło, aby odkryć ceny:' : 'Enter password to reveal prices:');
+                  const pwd = window.prompt('podaj haslo');
                   if (pwd === (process.env.NEXT_PUBLIC_PRICE_PASSWORD || 'navis')) {
                     setPricesRevealed(true);
                     sessionStorage.setItem('pricesRevealed', 'true');
