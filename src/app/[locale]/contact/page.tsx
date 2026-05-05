@@ -50,7 +50,7 @@ function ContactForm() {
 
       if (response.ok) {
         setIsSuccess(true);
-        setFormData({ name: '', email: '', geckoId: '', message: '' });
+        setFormData({ name: '', email: '', geckoId: '', message: '', website: '' });
       } else {
         setError(data.message || t('errorGeneric'));
       }
