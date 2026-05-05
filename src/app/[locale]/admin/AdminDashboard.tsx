@@ -11,11 +11,14 @@ import BreedersManager from './components/BreedersManager';
 import TranslationsManager from './components/TranslationsManager';
 import { useState } from 'react';
 
+import { supabase } from '@/lib/supabase';
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('content');
 
   const handleLogout = async () => {
+    await supabase.auth.signOut();
     await logoutAction();
     router.refresh();
   };

@@ -2,12 +2,12 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
-  --color-earth-dark: #245e38; /* Umiarkowanie rozjaśniona, ładna ciemna zieleń */
-  --color-earth-main: #429c5a; /* Umiarkowanie rozjaśniona główna zieleń */
-  --color-earth-light: #64c27d; /* Przyjemna, nie za jaskrawa jasna zieleń */
-  --color-earth-brown: #a86423; /* Ocieplony brąz */
-  --color-earth-beige: #f4ebe0; /* Jaśniejszy beż, cieplejszy */
-  --color-earth-accent: #fc8423; /* Żywszy pomarańczkowy */
+  --color-earth-dark: #1b482b; /* Nieco ciemniejsza, ładna ciemna zieleń */
+  --color-earth-main: #358049; /* Nieco ciemniejsza główna zieleń */
+  --color-earth-light: #4eab68; /* Ciemniejsza jasna zieleń */
+  --color-earth-brown: #8c521a; /* Ciemniejszy brąz */
+  --color-earth-beige: #fdfbf5; /* Bardzo jasny beż (poprzednio zbyt ciemny) */
+  --color-earth-accent: #e87317; /* Nieco ciemniejszy pomarańczowy */
   
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -15,16 +15,11 @@
 }
 
 :root {
-  --background: #fdfcfa;
-  --foreground: #245e38; 
+  --background: #f7f5f0;
+  --foreground: #1b482b; 
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1b3d28;
-    --foreground: #fcfbf9;
-  }
-}
+
 
 body {
   background: var(--background);

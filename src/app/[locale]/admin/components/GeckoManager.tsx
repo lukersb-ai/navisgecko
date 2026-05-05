@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Trash2, Edit, Plus, Upload, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock } from 'lucide-react';
 
 export default function GeckoManager() {
   const [geckos, setGeckos] = useState<any[]>([]);
@@ -22,6 +22,7 @@ export default function GeckoManager() {
   const [priceEur, setPriceEur] = useState('');
   const [hidePrice, setHidePrice] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
+  const [isSecret, setIsSecret] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -79,6 +80,7 @@ export default function GeckoManager() {
       priceEur: priceEur ? parseFloat(priceEur) : null,
       hidePrice,
       isHidden,
+      isSecret,
       status,
       imageUrls: finalUrls,
       imageUrl: finalUrls.length > 0 ? finalUrls[0] : null // Fallback for backward compatibility
@@ -114,6 +116,7 @@ export default function GeckoManager() {
     setPriceEur(g.priceEur?.toString() || '');
     setHidePrice(g.hidePrice || false);
     setIsHidden(g.isHidden || false);
+    setIsSecret(g.isSecret || false);
     // Backward compatibility for old records that only had imageUrl
     setImageUrls(g.imageUrls?.length > 0 ? g.imageUrls : (g.imageUrl ? [g.imageUrl] : []));
     setFiles([]);
@@ -129,6 +132,7 @@ export default function GeckoManager() {
     setPriceEur('');
     setHidePrice(false);
     setIsHidden(false);
+    setIsSecret(false);
     setFiles([]);
     setImageUrls([]);
     if (categories.length > 0) setCategoryId(categories[0].id);
@@ -208,6 +212,10 @@ export default function GeckoManager() {
                        <input type="checkbox" checked={isHidden} onChange={e=>setIsHidden(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4" />
                        Ukryj całkowicie gekona na stronie
                      </label>
+                     <label className="flex items-center gap-2 text-xs font-medium text-earth-dark cursor-pointer select-none mt-2">
+                       <input type="checkbox" checked={isSecret} onChange={e=>setIsSecret(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4" />
+                       Tajna oferta (widoczna po podaniu hasła na stronie)
+                     </label>
                   </div>
 
                   <div>
@@ -270,6 +278,7 @@ export default function GeckoManager() {
                         <div className={`mt-1 font-bold ${g.hidePrice ? 'text-gray-400 line-through' : 'text-earth-main'}`}>
                           {g.price ? `${g.price} PLN` : '-'} / {g.priceEur ? `${g.priceEur} EUR` : '-'}
                         </div>
+                        {g.isSecret && <div className="mt-1 flex items-center gap-1 text-xs text-earth-accent font-bold"><Lock className="w-3 h-3"/> Tajna oferta</div>}
                       </td>
                       <td className="p-4">
                         <div className="font-medium text-earth-dark">{g.morph}</div>

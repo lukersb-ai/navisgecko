@@ -6,9 +6,8 @@ export default async function AdminPage() {
   const cookieStore = await cookies();
   const authCookie = cookieStore.get('admin_auth');
   
-  // Verify if the active cookie matches the environment password and the password exists
-  const expectedPassword = process.env.ADMIN_PASSWORD;
-  const isAuthenticated = expectedPassword ? authCookie?.value === expectedPassword : false;
+  // Verify if the active cookie matches the new authenticated state
+  const isAuthenticated = authCookie?.value === 'authenticated';
 
   if (isAuthenticated) {
     return <AdminDashboard />;

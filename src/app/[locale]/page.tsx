@@ -31,12 +31,21 @@ export default async function Home({ params }: { params: { locale: string } }) {
 
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto mt-16 md:mt-0">
-          <h1 className="text-4xl md:text-6xl font-bold text-earth-beige mb-6 tracking-tight">
+          <h1 
+            className="text-4xl md:text-6xl font-bold text-earth-beige mb-6 tracking-tight"
+            style={{ textShadow: '0px 2px 4px rgba(0,0,0,0.4)' }}
+          >
             {t('heroTitle')} <br/>
-            <span className="text-earth-accent text-3xl md:text-5xl mt-2 block">{t('heroSubtitle')}</span>
+            <span 
+              className="text-earth-accent text-3xl md:text-5xl mt-2 block"
+              style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.3)' }}
+            >
+              {t('heroSubtitle')}
+            </span>
           </h1>
           <div 
              className="mt-4 text-xl md:text-2xl text-earth-beige/90 mb-10 max-w-2xl mx-auto prose prose-invert prose-p:text-earth-beige/90"
+             style={{ textShadow: '0px 1px 2px rgba(0,0,0,0.3)' }}
              dangerouslySetInnerHTML={{ __html: heroHtml || t('heroDesc') }}
           />
           <Link

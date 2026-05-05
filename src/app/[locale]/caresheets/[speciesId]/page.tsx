@@ -70,23 +70,23 @@ export default function SpeciesCaresheetPage({ params }: { params: Promise<{ spe
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="bg-white rounded-2xl p-8 shadow-xl border border-earth-dark/5 hover:shadow-2xl hover:border-earth-accent/30 transition-all group flex flex-col justify-start"
+              className="bg-earth-beige/30 rounded-3xl p-8 md:p-10 shadow-md border border-earth-dark/5 hover:border-earth-accent/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-start"
             >
-              <div className="flex items-start gap-6">
-                <div className="p-4 bg-earth-beige/30 rounded-xl group-hover:scale-110 transition-transform">
+              <div className="flex flex-col sm:flex-row items-start gap-6">
+                <div className="p-4 bg-white/60 rounded-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                   {iconMap[card.iconName] || <Info className="w-8 h-8 text-earth-dark" />}
                 </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-earth-dark mb-3">
+                <div className="flex-1">
+                  <h3 className="text-2xl font-extrabold text-earth-dark mb-3 group-hover:text-earth-accent transition-colors">
                     {isPl ? card.titlePl : card.titleEn}
                   </h3>
-                  <p className="text-earth-dark/70 leading-relaxed">
+                  <p className="text-earth-dark/70 leading-relaxed text-lg">
                     {isPl ? card.descPl : card.descEn}
                   </p>
                   
                   {((isPl && card.contentPl) || (!isPl && card.contentEn)) && (
                     <div className="mt-6 pt-6 border-t border-earth-dark/10">
-                      <p className="text-earth-dark/80 text-sm leading-relaxed">
+                      <p className="text-earth-dark/80 leading-relaxed">
                         {isPl ? card.contentPl : card.contentEn}
                       </p>
                     </div>

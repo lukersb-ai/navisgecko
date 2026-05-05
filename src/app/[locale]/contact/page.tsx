@@ -15,7 +15,8 @@ function ContactForm() {
     name: '',
     email: '',
     geckoId: geckoIdParam,
-    message: ''
+    message: '',
+    website: '' // honeypot
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -141,6 +142,20 @@ function ContactForm() {
           className="w-full px-4 py-3 rounded-xl border border-earth-main/30 bg-earth-beige/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-earth-accent focus:border-transparent transition-all"
           placeholder={t('messagePlaceholder')}
         ></textarea>
+      </div>
+
+      {/* Honeypot field - completely invisible to real users but bots will fill it */}
+      <div className="absolute opacity-0 -z-10 h-0 w-0 overflow-hidden" aria-hidden="true">
+        <label htmlFor="website">Website</label>
+        <input
+          type="text"
+          id="website"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          value={formData.website}
+          onChange={handleChange}
+        />
       </div>
 
       <button

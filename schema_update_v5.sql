@@ -1,0 +1,1 @@
+ALTER TABLE geckos ADD COLUMN "isSecret" BOOLEAN DEFAULT false;

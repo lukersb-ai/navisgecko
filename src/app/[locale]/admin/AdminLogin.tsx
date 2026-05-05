@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginAction } from '@/app/actions/adminAuth';
 import { Lock, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function AdminLogin() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,12 +18,25 @@ export default function AdminLogin() {
     setError('');
     setLoading(true);
 
-    const res = await loginAction(password);
+    // Najpierw logowanie z Supabase (ustawia bezpieczną sesję na urządzeniu klienta do operacji RLS)
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      setError(authError.message === 'Invalid login credentials' ? 'Nieprawidłowy email lub hasło' : authError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Następnie ustawiamy ciasteczko Next.js aby odblokować renderowanie dashboardu po stronie serwera
+    const res = await loginAction();
     
     if (res.success) {
       router.refresh();
     } else {
-      setError(res.error || 'Błąd logowania');
+      setError('Błąd ustawiania sesji przeglądarki.');
       setLoading(false);
     }
   };
@@ -33,13 +48,24 @@ export default function AdminLogin() {
            <div className="mx-auto w-16 h-16 bg-earth-beige/30 rounded-full flex items-center justify-center mb-4">
              <Lock className="w-8 h-8 text-earth-accent" />
            </div>
-           <h1 className="text-3xl font-bold text-earth-dark">Panel Autora</h1>
-           <p className="text-earth-dark/60 mt-2">Dostęp tylko dla upoważnionych hodowców.</p>
+           <h1 className="text-3xl font-bold text-earth-dark">Bezpieczny Panel Autora</h1>
+           <p className="text-earth-dark/60 mt-2">Logowanie zweryfikowane przez Supabase Auth.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-earth-dark mb-2">Hasło dostępowe</label>
+            <label className="block text-sm font-medium text-earth-dark mb-2">Adres Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 bg-earth-beige/10 border border-earth-beige/30 rounded-xl focus:ring-2 focus:ring-earth-accent focus:border-transparent transition-all text-earth-dark outline-none"
+              placeholder="Twój email..."
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-earth-dark mb-2">Hasło dostępne</label>
             <input
               type="password"
               value={password}

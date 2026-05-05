@@ -161,10 +161,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
             }`}
           >
             {statusLower === 'available' ? (
-              <>
-                <ShoppingCart className="w-5 h-5" />
-                {t('reserve')}
-              </>
+              t('reserve')
             ) : (
               statusLower === 'reserved' ? t('reserved') : (locale === 'pl' ? 'Niedostępny' : 'Unavailable')
             )}
@@ -176,27 +173,50 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
   );
 }
 
+import { getGeckosAction, verifyPricePassword, lockPrices } from '@/app/actions/geckos';
+
 export default function AvailableGeckos() {
   const [geckosDB, setGeckosDB] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [pricesRevealed, setPricesRevealed] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const t = useTranslations('Available');
   const locale = useLocale();
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('pricesRevealed') === 'true') {
+  const handlePasswordSubmit = async () => {
+    const success = await verifyPricePassword(passwordInput);
+    if (success) {
       setPricesRevealed(true);
+      setShowPasswordModal(false);
+      // Reload geckos to get the secret ones from server
+      setLoading(true);
+      const data = await getGeckosAction();
+      setGeckosDB(data.geckos);
+      setLoading(false);
+    } else {
+      setPasswordError(locale === 'pl' ? 'Nieprawidłowe hasło' : 'Incorrect password');
     }
-    
+  };
+
+  const handleLock = async () => {
+    await lockPrices();
+    setPricesRevealed(false);
+    setLoading(true);
+    const data = await getGeckosAction();
+    setGeckosDB(data.geckos);
+    setLoading(false);
+  };
+
+  useEffect(() => {
     async function load() {
-      const [gRes, cRes] = await Promise.all([
-        supabase.from('geckos').select('*').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*')
-      ]);
-      if (gRes.data) setGeckosDB(gRes.data.filter((g: any) => g.isHidden !== true));
-      if (cRes.data) setCategories(cRes.data);
+      const data = await getGeckosAction();
+      setGeckosDB(data.geckos);
+      setCategories(data.categories);
+      setPricesRevealed(data.isRevealed);
       setLoading(false);
     }
     load();
@@ -256,28 +276,69 @@ export default function AvailableGeckos() {
 
         {/* Secret Padlock */}
         {!loading && (
-          <div className="mt-16 flex justify-center opacity-20 hover:opacity-100 transition-opacity duration-300">
+          <div className={`mt-16 flex justify-center transition-opacity duration-300 relative ${showPasswordModal ? 'opacity-100' : 'opacity-60 md:opacity-20 hover:opacity-100'}`}>
+            <AnimatePresence>
+              {showPasswordModal && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute bottom-full mb-3 bg-white/60 backdrop-blur-md rounded-full p-3 shadow-lg border border-white/40 flex items-center gap-3 z-10"
+                >
+                  <input 
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value);
+                      setPasswordError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handlePasswordSubmit();
+                      }
+                    }}
+                    placeholder={locale === 'pl' ? 'Hasło...' : 'Password...'}
+                    className="w-48 px-4 py-2.5 rounded-full border border-white/50 focus:outline-none focus:ring-2 focus:ring-earth-main/50 bg-white/50 text-base placeholder:text-earth-dark/50 text-earth-dark"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handlePasswordSubmit}
+                    className="px-6 py-2.5 rounded-full text-base font-bold bg-earth-dark text-earth-beige hover:bg-earth-main transition-colors"
+                  >
+                    OK
+                  </button>
+                  <button 
+                    onClick={() => setShowPasswordModal(false)}
+                    className="px-3 py-2 text-earth-dark/60 hover:text-earth-dark transition-colors font-bold text-lg"
+                  >
+                    ✕
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <button 
               onClick={() => {
                 if (pricesRevealed) {
-                  setPricesRevealed(false);
-                  sessionStorage.removeItem('pricesRevealed');
+                  handleLock();
                 } else {
-                  const pwd = window.prompt('podaj haslo');
-                  if (pwd === (process.env.NEXT_PUBLIC_PRICE_PASSWORD || 'navis')) {
-                    setPricesRevealed(true);
-                    sessionStorage.setItem('pricesRevealed', 'true');
-                  } else if (pwd !== null) {
-                    alert(locale === 'pl' ? 'Nieprawidłowe hasło' : 'Incorrect password');
-                  }
+                  setShowPasswordModal(!showPasswordModal);
+                  setPasswordInput('');
+                  setPasswordError('');
                 }
               }}
-              className="p-4 rounded-full hover:bg-earth-beige/50"
+              className={`p-4 rounded-full transition-all duration-300 ${showPasswordModal ? 'opacity-0 invisible scale-90' : 'opacity-100 visible hover:bg-earth-beige/50'}`}
               title="Secret"
               aria-label="Secret"
             >
               {pricesRevealed ? <Unlock className="w-5 h-5 text-earth-dark/50" /> : <Lock className="w-5 h-5 text-earth-dark/50" />}
             </button>
+            
+            {passwordError && showPasswordModal && (
+              <span className="absolute top-full mt-2 text-xs text-red-500 font-medium bg-white/80 px-2 py-1 rounded-md backdrop-blur-sm shadow-sm border border-white/50">
+                {passwordError}
+              </span>
+            )}
           </div>
         )}
       </div>
