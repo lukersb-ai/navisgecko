@@ -48,8 +48,7 @@ export default function AdminLogin() {
            <div className="mx-auto w-16 h-16 bg-earth-beige/30 rounded-full flex items-center justify-center mb-4">
              <Lock className="w-8 h-8 text-earth-accent" />
            </div>
-           <h1 className="text-3xl font-bold text-earth-dark">Bezpieczny Panel Autora</h1>
-           <p className="text-earth-dark/60 mt-2">Logowanie zweryfikowane przez Supabase Auth.</p>
+           <h1 className="text-3xl font-bold text-earth-dark">Panel administratora</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
