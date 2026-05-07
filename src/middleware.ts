@@ -39,14 +39,18 @@ export async function middleware(request: NextRequest) {
     );
 
     const { data: { user } } = await supabase.auth.getUser();
-
+    
     if (!user) {
-      // Determine locale from pathname
       const locale = pathname.startsWith('/en') ? 'en' : 'pl';
-      const loginUrl = new URL(`/${locale}/admin`, request.url);
-      // Store the original destination so we could redirect back after login
-      loginUrl.searchParams.set('unauthorized', '1');
-      return NextResponse.redirect(loginUrl);
+      const loginPath = `/${locale}/admin`;
+      
+      // Allow access to the root admin path (where the login form is) without redirect
+      // This prevents the infinite redirect loop
+      if (pathname !== loginPath && pathname !== `${loginPath}/`) {
+        const loginUrl = new URL(loginPath, request.url);
+        loginUrl.searchParams.set('unauthorized', '1');
+        return NextResponse.redirect(loginUrl);
+      }
     }
 
     return response;
