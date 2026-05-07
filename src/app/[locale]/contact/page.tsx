@@ -2,7 +2,7 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Send, CheckCircle, Loader2 } from 'lucide-react';
+import { Send, CheckCircle, LoaderCircle } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { supabase } from '@/lib/supabase';
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginAction } from '@/app/actions/adminAuth';
-import { Lock, Loader2 } from 'lucide-react';
+import { Lock, LoaderCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function AdminLogin() {
@@ -82,7 +82,7 @@ export default function AdminLogin() {
             disabled={loading}
             className="w-full bg-earth-accent hover:bg-earth-dark text-white font-medium py-3 px-6 rounded-xl transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-earth-accent flex justify-center items-center"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Zaloguj się'}
+            {loading ? <LoaderCircle className="w-5 h-5 animate-spin" /> : 'Zaloguj się'}
           </button>
         </form>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Save, FileText } from 'lucide-react';
+import { LoaderCircle, Save, FileText } from 'lucide-react';
 import TiptapEditor from './TiptapEditor';
 
 const availableSections = [
@@ -55,7 +55,13 @@ export default function SiteContentManager() {
     if (error) {
       alert('Błąd podczas zapisu: ' + error.message);
     } else {
-      alert('Treść pomyślnie zapisana!');
+      // Trigger on-demand revalidation so changes appear immediately
+      await fetch('/api/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: process.env.NEXT_PUBLIC_REVALIDATE_SECRET }),
+      });
+      alert('Treść pomyślnie zapisana! Strona zostanie zaktualizowana.');
     }
     setSaving(false);
   };
@@ -89,7 +95,7 @@ export default function SiteContentManager() {
       <div className="p-6 md:p-8">
         {loading ? (
           <div className="flex justify-center p-12">
-             <Loader2 className="w-8 h-8 animate-spin text-earth-accent" />
+             <LoaderCircle className="w-8 h-8 animate-spin text-earth-accent" />
           </div>
         ) : (
           <div className="space-y-6">
@@ -121,7 +127,7 @@ export default function SiteContentManager() {
                 disabled={saving}
                 className="flex items-center gap-2 bg-earth-accent hover:bg-earth-dark text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-70 text-lg"
               >
-                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                {saving ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 Opublikuj Treść
               </button>
             </div>

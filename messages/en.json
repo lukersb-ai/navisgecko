@@ -2,7 +2,7 @@
   "Navbar": {
     "home": "Home",
     "about": "Our Breeding",
-    "available": "Available Geckos",
+    "available": "Available Animals",
     "caresheets": "Caresheets",
     "contact": "Contact"
   },
@@ -11,7 +11,7 @@
     "links": "Quick Links",
     "contact": "Contact Us",
     "address": "Łódź, Poland",
-    "phone": "+48 123 456 789",
+    "phone": "+48 XXX XXX XXX",
     "email": "navisgecko@gmail.com",
     "rights": "All rights reserved."
   },
@@ -21,26 +21,28 @@
     "heroDesc": "We specialize in the professional breeding of high-quality leopard geckos with an emphasis on excellent conditions, great genetics, and unique morphs.",
     "heroButton": "View Available Geckos",
     "aboutTitle": "Our Breeding Philosophy",
-    "aboutDesc": "Our adventure with terrariums began with a pure passion for these amazing reptiles. Today, our mission is to breed healthy, strong, and beautiful individuals. At Gecko Haven, animal welfare comes first.",
+    "aboutDesc": "Our adventure with terrariums began with a pure passion for these amazing reptiles. Today, our mission is to breed healthy, strong, and beautiful individuals. At Navis Gecko, animal welfare comes first.",
     "aboutList1": "Only healthy breeding individuals, regularly examined by veterinarians.",
     "aboutList2": "Optimal diet, supplementation, and naturally arranged large habitats.",
     "aboutList3": "Meticulously tracked genetics and precise matching of morphs.",
     "aboutList4": "Professional support for future owners of our geckos.",
     "breedersTitle": "Our Breeding Stock",
-    "breedersDesc": "The foundation of every great breeding project lies in exceptional genes. Allow us to introduce some key representatives of our breeding lines."
+    "breedersDesc": "The foundation of every great breeding project lies in exceptional genes. Allow us to introduce some key representatives of our breeding lines.",
+    "noBreeders": "Log in to the admin panel and check the \"Our Breeding\" section to add charming descriptions of your own geckos."
   },
   "Geckos": {
     "genderMale": "Male",
     "genderFemale": "Female",
-    "genderUnknown": "Unknown"
+    "genderUnknown": "Unsexed"
   },
   "Available": {
-    "title": "Available Geckos",
+    "title": "Available Animals",
     "description": "Browse our current offers. Each individual is described in detail. If you are interested, click \"Reserve\" and proceed to the form.",
     "all": "All",
     "askPrice": "Ask",
     "statusAvailable": "AVAILABLE",
     "statusReserved": "RESERVED",
+    "statusSold": "UNAVAILABLE",
     "id": "ID",
     "morph": "Morph",
     "gender": "Gender",
@@ -49,14 +51,20 @@
     "noData": "No data",
     "details": "Details & History",
     "reserve": "Reserve",
-    "reserved": "Reserved"
+    "reserved": "Reserved",
+    "noResults": "No animals matching criteria.",
+    "passwordError": "Incorrect password",
+    "passwordPlaceholder": "Password...",
+    "sortBy": "Sort by price",
+    "sortAsc": "Ascending",
+    "sortDesc": "Descending"
   },
   "Contact": {
     "pageTitle": "Contact Us",
     "pageDesc": "Do you have questions about specific individuals? Want to make a reservation or learn more about gecko care? Write to us!",
     "formLoading": "Loading form...",
     "successTitle": "Message sent!",
-    "successDesc": "Thank you for contacting us. We will reply to your email as soon as possible (usually within 24 hours).",
+    "successDesc": "Thank you for contacting us. We will reply to your email as soon as possible",
     "sendAnother": "Send another message",
     "nameLabel": "Full Name / Nickname",
     "namePlaceholder": "John Doe",
@@ -65,14 +73,14 @@
     "geckoLabel": "Interested in (ID / Morph) - Optional",
     "geckoPlaceholder": "e.g. LG-0104",
     "messageLabel": "Your Message",
-    "messagePlaceholder": "I want to reserve a gecko, I have some questions about terrariums...",
+    "messagePlaceholder": "",
     "sending": "Sending...",
     "send": "Send Message",
     "errorGeneric": "Connection error. Try again later."
   },
   "Caresheets": {
     "pageTitle": "Care Sheets",
-    "pageDesc": "Short, substantive guides on breeding and housing our animals.",
+    "pageDesc": "Short and substantive guides on breeding.",
     "tempTitle": "Temperature and Lighting",
     "tempDesc": "Heat requirements, basking spots, and day/night cycles...",
     "dietTitle": "Diet and Supplementation",

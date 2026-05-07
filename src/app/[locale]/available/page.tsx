@@ -21,9 +21,9 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
 
   const getGenderIcon = (gender: string) => {
     const g = gender?.toLowerCase();
-    if (g === 'male') return <span className="font-bold text-blue-500">♂ {tGeckos('genderMale')}</span>;
-    if (g === 'female') return <span className="font-bold text-pink-500">♀ {tGeckos('genderFemale')}</span>;
-    return <span>? {tGeckos('genderUnknown')}</span>;
+    if (g === 'male') return <span className="font-bold text-blue-400">♂ {tGeckos('genderMale')}</span>;
+    if (g === 'female') return <span className="font-bold text-pink-400">♀ {tGeckos('genderFemale')}</span>;
+    return <span className="font-medium text-gray-400">{tGeckos('genderUnknown')}</span>;
   };
 
   const images = gecko.imageUrl ? [gecko.imageUrl] : ['/hero.png'];
@@ -82,7 +82,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
             statusLower === 'available' ? 'bg-earth-light' : 
             statusLower === 'reserved' ? 'bg-earth-accent' : 'bg-gray-500'
           }`}>
-            {statusLower === 'available' ? t('statusAvailable') : statusLower === 'reserved' ? t('statusReserved') : 'Niedostępny'}
+            {statusLower === 'available' ? t('statusAvailable') : statusLower === 'reserved' ? t('statusReserved') : t('statusSold')}
           </span>
         </div>
       </div>
@@ -163,7 +163,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
             {statusLower === 'available' ? (
               t('reserve')
             ) : (
-              statusLower === 'reserved' ? t('reserved') : (locale === 'pl' ? 'Niedostępny' : 'Unavailable')
+              statusLower === 'reserved' ? t('reserved') : t('statusSold')
             )}
           </Link>
         </div>
@@ -179,12 +179,16 @@ export default function AvailableGeckos() {
   const [geckosDB, setGeckosDB] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [activeGender, setActiveGender] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'none' | 'price-asc' | 'price-desc'>('none');
   const [loading, setLoading] = useState(true);
   const [pricesRevealed, setPricesRevealed] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(12);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const t = useTranslations('Available');
+  const tGeckos = useTranslations('Geckos');
   const locale = useLocale();
 
   const handlePasswordSubmit = async () => {
@@ -196,9 +200,10 @@ export default function AvailableGeckos() {
       setLoading(true);
       const data = await getGeckosAction();
       setGeckosDB(data.geckos);
+      setCategories(data.categories);
       setLoading(false);
     } else {
-      setPasswordError(locale === 'pl' ? 'Nieprawidłowe hasło' : 'Incorrect password');
+      setPasswordError(t('passwordError'));
     }
   };
 
@@ -208,6 +213,7 @@ export default function AvailableGeckos() {
     setLoading(true);
     const data = await getGeckosAction();
     setGeckosDB(data.geckos);
+    setCategories(data.categories);
     setLoading(false);
   };
 
@@ -222,38 +228,113 @@ export default function AvailableGeckos() {
     load();
   }, []);
 
-  const filteredGeckos = activeFilter === 'all' 
-    ? geckosDB 
-    : geckosDB.filter(g => g.categoryId === activeFilter);
+  const filteredAndSortedGeckos = geckosDB
+    .filter(g => {
+      const matchesCategory = activeFilter === 'all' || g.categoryId === activeFilter;
+      const matchesGender = activeGender === 'all' || g.gender?.toLowerCase() === activeGender;
+      return matchesCategory && matchesGender;
+    })
+    .sort((a, b) => {
+      // Hidden prices always at the end
+      if (a.hidePrice && !b.hidePrice) return 1;
+      if (!a.hidePrice && b.hidePrice) return -1;
+      if (a.hidePrice && b.hidePrice) return 0;
+
+      if (sortBy === 'price-asc') {
+        const pA = locale === 'pl' ? (a.price || 0) : (a.priceEur || 0);
+        const pB = locale === 'pl' ? (b.price || 0) : (b.priceEur || 0);
+        return pA - pB;
+      }
+      if (sortBy === 'price-desc') {
+        const pA = locale === 'pl' ? (a.price || 0) : (a.priceEur || 0);
+        const pB = locale === 'pl' ? (b.price || 0) : (b.priceEur || 0);
+        return pB - pA;
+      }
+      return 0;
+    });
 
   return (
     <div className="min-h-screen bg-background py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-earth-dark mb-4">{t('title')}</h1>
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-4xl font-bold text-earth-dark">{t('title')}</h1>
+          </div>
+
           <p className="text-earth-dark/70 text-lg max-w-2xl mb-8">
             {t('description')}
           </p>
           
-          {!loading && categories.length > 0 && (
-            <div className="flex flex-wrap gap-3 mb-10 w-full overflow-x-auto pb-4 pt-2 pl-2 -ml-2 scrollbar-hide">
-              <button 
-                onClick={() => setActiveFilter('all')}
-                className={`px-8 py-3.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap text-lg ${activeFilter === 'all' ? 'bg-earth-dark text-earth-beige scale-105' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
-              >
-                {locale === 'pl' ? 'Wszystkie' : 'All'}
-              </button>
-              {categories.map(c => (
+          <div className="space-y-2">
+            {/* Category Filter */}
+            {!loading && categories.length > 0 && (
+              <div className="flex flex-wrap gap-3 w-full overflow-x-auto pb-2 scrollbar-hide">
                 <button 
-                  key={c.id}
-                  onClick={() => setActiveFilter(c.id)}
-                  className={`px-8 py-3.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap text-lg ${activeFilter === c.id ? 'bg-earth-dark text-earth-beige scale-105' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
+                  onClick={() => setActiveFilter('all')}
+                  className={`px-6 py-2.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap ${activeFilter === 'all' ? 'bg-earth-dark text-earth-beige' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
                 >
-                  {locale === 'pl' ? c.namePl : c.nameEn}
+                  {locale === 'pl' ? 'Wszystkie gatunki' : 'All species'}
                 </button>
-              ))}
-            </div>
-          )}
+                {categories.map(c => (
+                  <button 
+                    key={c.id}
+                    onClick={() => setActiveFilter(c.id)}
+                    className={`px-6 py-2.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap ${activeFilter === c.id ? 'bg-earth-dark text-earth-beige' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
+                  >
+                    {locale === 'pl' ? c.namePl : c.nameEn}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Gender Filter & Sorting Row */}
+            {!loading && activeFilter !== 'all' && (
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap gap-3 overflow-x-auto pb-2 scrollbar-hide ml-8">
+                  <button 
+                    onClick={() => setActiveGender('all')}
+                    className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'all' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-green-50'}`}
+                  >
+                    {locale === 'pl' ? 'Wszystkie' : 'All'}
+                  </button>
+                  <button 
+                    onClick={() => setActiveGender('male')}
+                    className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'male' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-blue-50'}`}
+                  >
+                    ♂ {tGeckos('genderMale')}
+                  </button>
+                  <button 
+                    onClick={() => setActiveGender('female')}
+                    className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'female' ? 'bg-pink-100 text-pink-800 border-pink-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-pink-50'}`}
+                  >
+                    ♀ {tGeckos('genderFemale')}
+                  </button>
+                  <button 
+                    onClick={() => setActiveGender('unknown')}
+                    className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'unknown' ? 'bg-gray-100 text-gray-700 border-gray-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-gray-50'}`}
+                  >
+                    {tGeckos('genderUnknown')}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1 pr-2">
+                  <button 
+                    onClick={() => setSortBy(sortBy === 'price-asc' ? 'none' : 'price-asc')}
+                    className={`px-2 py-1 rounded text-[11px] font-bold transition-all ${sortBy === 'price-asc' ? 'text-earth-main' : 'text-earth-dark/40 hover:text-earth-dark'}`}
+                  >
+                    {t('sortAsc')} ↑
+                  </button>
+                  <span className="text-earth-dark/10 text-[10px]">|</span>
+                  <button 
+                    onClick={() => setSortBy(sortBy === 'price-desc' ? 'none' : 'price-desc')}
+                    className={`px-2 py-1 rounded text-[11px] font-bold transition-all ${sortBy === 'price-desc' ? 'text-earth-main' : 'text-earth-dark/40 hover:text-earth-dark'}`}
+                  >
+                    {t('sortDesc')} ↓
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -261,17 +342,30 @@ export default function AvailableGeckos() {
             <div className="w-12 h-12 border-4 border-earth-accent/30 border-t-earth-accent rounded-full animate-spin"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredGeckos.length > 0 ? (
-              filteredGeckos.map((gecko) => (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+              {filteredAndSortedGeckos.slice(0, visibleCount).map((gecko, idx) => (
                 <GeckoCard key={gecko.id} gecko={gecko} locale={locale} pricesRevealed={pricesRevealed} />
-              ))
-            ) : (
-              <div className="col-span-full text-center text-earth-dark/60 py-12 border-2 border-dashed border-earth-dark/20 rounded-xl">
-                Brak gekonów w tej kategorii.
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {filteredAndSortedGeckos.length > visibleCount && (
+              <div className="mt-16 text-center">
+                <button 
+                  onClick={() => setVisibleCount(prev => prev + 12)}
+                  className="px-8 py-4 bg-white border-2 border-earth-dark/10 text-earth-dark rounded-full font-bold hover:bg-earth-beige/20 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  Pokaż więcej ({filteredAndSortedGeckos.length - visibleCount})
+                </button>
               </div>
             )}
-          </div>
+            {filteredAndSortedGeckos.length === 0 && (
+              <div className="col-span-full text-center text-earth-dark/60 py-12 border-2 border-dashed border-earth-dark/20 rounded-xl">
+                {t('noResults')}
+              </div>
+            )}
+          </>
         )}
 
         {/* Secret Padlock */}
@@ -297,7 +391,7 @@ export default function AvailableGeckos() {
                         handlePasswordSubmit();
                       }
                     }}
-                    placeholder={locale === 'pl' ? 'Hasło...' : 'Password...'}
+                    placeholder={t('passwordPlaceholder')}
                     className="w-48 px-4 py-2.5 rounded-full border border-white/50 focus:outline-none focus:ring-2 focus:ring-earth-main/50 bg-white/50 text-base placeholder:text-earth-dark/50 text-earth-dark"
                     autoFocus
                   />

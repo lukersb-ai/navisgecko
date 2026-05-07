@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Link } from '@/i18n/routing';
-import { ChevronLeft, ThermometerSun, Apple, Grid, HeartHandshake, TreePine, Info, Loader2 } from 'lucide-react';
+import { ChevronLeft, ThermometerSun, Apple, Grid, HeartHandshake, TreePine, Info, LoaderCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
 
@@ -43,7 +43,7 @@ export default function SpeciesCaresheetPage({ params }: { params: Promise<{ spe
   }
 
   if (loading) {
-     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-earth-accent" /></div>;
+     return <div className="min-h-screen flex items-center justify-center"><LoaderCircle className="w-10 h-10 animate-spin text-earth-accent" /></div>;
   }
 
   return (
@@ -54,41 +54,48 @@ export default function SpeciesCaresheetPage({ params }: { params: Promise<{ spe
           {isPl ? 'Wróć do listy gatunków' : 'Back to species list'}
         </Link>
         
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-earth-dark mb-4">
+        <div className="text-center mb-16 relative">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-earth-accent/5 rounded-full blur-3xl -z-10"></div>
+          <h1 className="text-4xl md:text-6xl font-black text-earth-dark mb-6 tracking-tight">
             {isPl ? species.namePl : species.nameEn}
           </h1>
-          <p className="text-earth-dark/70 text-lg max-w-2xl mx-auto">
-            {isPl ? species.descriptionPl : species.descriptionEn}
-          </p>
+          <div className="w-24 h-1.5 bg-earth-accent rounded-full mx-auto mb-8"></div>
+          <div className="prose-earth mx-auto">
+            <p className="text-xl md:text-2xl text-earth-dark/70 leading-relaxed font-medium">
+              {isPl ? species.descriptionPl : species.descriptionEn}
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {(species.cards || []).map((card: any, index: number) => (
             <motion.div 
               key={card.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="bg-earth-beige/30 rounded-3xl p-8 md:p-10 shadow-md border border-earth-dark/5 hover:border-earth-accent/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-start"
+              className="bg-white/40 backdrop-blur-sm rounded-[2.5rem] p-8 md:p-12 shadow-xl shadow-earth-dark/5 border border-white/60 hover:border-earth-accent/20 hover:shadow-2xl hover:shadow-earth-accent/5 hover:-translate-y-1.5 transition-all duration-500 group flex flex-col"
             >
-              <div className="flex flex-col sm:flex-row items-start gap-6">
-                <div className="p-4 bg-white/60 rounded-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                  {iconMap[card.iconName] || <Info className="w-8 h-8 text-earth-dark" />}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-extrabold text-earth-dark mb-3 group-hover:text-earth-accent transition-colors">
+              <div className="flex flex-col gap-8">
+                <div className="flex items-center gap-6">
+                  <div className="p-5 bg-white rounded-3xl shadow-lg shadow-earth-dark/5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                    {iconMap[card.iconName] || <Info className="w-10 h-10 text-earth-dark" />}
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-black text-earth-dark leading-tight group-hover:text-earth-accent transition-colors">
                     {isPl ? card.titlePl : card.titleEn}
                   </h3>
-                  <p className="text-earth-dark/70 leading-relaxed text-lg">
+                </div>
+
+                <div className="prose-earth">
+                  <p className="text-lg md:text-xl text-earth-dark/80 leading-relaxed font-medium">
                     {isPl ? card.descPl : card.descEn}
                   </p>
                   
                   {((isPl && card.contentPl) || (!isPl && card.contentEn)) && (
-                    <div className="mt-6 pt-6 border-t border-earth-dark/10">
-                      <p className="text-earth-dark/80 leading-relaxed">
+                    <div className="mt-8 pt-8 border-t border-earth-dark/10 space-y-4">
+                      <div className="text-earth-dark/70 leading-relaxed text-lg">
                         {isPl ? card.contentPl : card.contentEn}
-                      </p>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getTranslationsList, saveTranslationsList } from '@/app/actions/translations';
-import { Loader2, Save, Type, LayoutList } from 'lucide-react';
+import { LoaderCircle, Save, Type, LayoutList } from 'lucide-react';
 
 export default function TranslationsManager() {
   const [dataPl, setDataPl] = useState<any>(null);
@@ -45,7 +45,7 @@ export default function TranslationsManager() {
     }
   };
 
-  if (loading) return <div className="flex justify-center p-20"><Loader2 className="w-12 h-12 text-earth-accent animate-spin" /></div>;
+  if (loading) return <div className="flex justify-center p-20"><LoaderCircle className="w-12 h-12 text-earth-accent animate-spin" /></div>;
   if (!dataPl) return <div className="p-10 text-center text-xl text-red-500">Błąd ładowania tekstów. Odśwież stronę.</div>;
 
   const namespaces = Object.keys(dataPl);
@@ -73,7 +73,7 @@ export default function TranslationsManager() {
           </div>
         </div>
         <button disabled={saving} onClick={handleSave} className="flex items-center gap-3 bg-earth-accent hover:bg-earth-dark text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-          {saving ? <Loader2 className="w-6 h-6 animate-spin"/> : <Save className="w-6 h-6"/>}
+          {saving ? <LoaderCircle className="w-6 h-6 animate-spin"/> : <Save className="w-6 h-6"/>}
           {saving ? 'Zapisywanie...' : 'Zapisz Wprowadzone Zmiany'}
         </button>
       </div>

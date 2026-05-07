@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Save, Trash2, Tags, Plus } from 'lucide-react';
+import { LoaderCircle, Save, Trash2, Tags, Plus } from 'lucide-react';
 
 export default function CategoriesManager() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -21,7 +21,7 @@ export default function CategoriesManager() {
   };
 
   const addCategory = () => {
-    setCategories([...categories, { id: '', namePl: '', nameEn: '', isNew: true }]);
+    setCategories([...categories, { id: '', namePl: '', nameEn: '', isPrivate: false, isNew: true }]);
   };
 
   const updateCategory = (index: number, field: string, value: string) => {
@@ -40,7 +40,8 @@ export default function CategoriesManager() {
     const { error } = await supabase.from('categories').upsert({
       id: cat.id,
       namePl: cat.namePl,
-      nameEn: cat.nameEn
+      nameEn: cat.nameEn,
+      isPrivate: cat.isPrivate || false
     });
     if (error) {
       alert('Błąd: ' + error.message);
@@ -90,7 +91,7 @@ export default function CategoriesManager() {
 
       <div className="p-6 md:p-8">
         {loading ? (
-             <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>
+             <div className="flex justify-center"><LoaderCircle className="w-8 h-8 animate-spin" /></div>
         ) : (
           <div className="space-y-4">
             {categories.map((cat, idx) => (
@@ -107,9 +108,15 @@ export default function CategoriesManager() {
                    <label className="text-xs font-bold uppercase mb-1 block">Nazwa EN</label>
                    <input required value={cat.nameEn} onChange={e=>updateCategory(idx, 'nameEn', e.target.value)} className="w-full border p-2 rounded text-sm" />
                 </div>
+                <div className="w-full flex items-center h-full pt-4">
+                   <label className="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" checked={cat.isPrivate || false} onChange={e=>updateCategory(idx, 'isPrivate', e.target.checked as any)} className="w-4 h-4 rounded text-amber-500" />
+                      <span className="text-xs font-bold group-hover:text-amber-600 transition-colors">Prywatna</span>
+                   </label>
+                </div>
                 <div className="flex gap-2">
                    <button onClick={() => saveCategory(cat)} disabled={saving} className="bg-earth-accent hover:bg-earth-dark text-white p-2.5 rounded-lg font-bold min-w-[100px] flex justify-center">
-                     {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Zapisz'}
+                     {saving ? <LoaderCircle className="w-4 h-4 animate-spin"/> : 'Zapisz'}
                    </button>
                    <button onClick={() => deleteCategory(cat.id, cat.isNew)} className="bg-red-100 hover:bg-red-200 text-red-600 p-2.5 rounded-lg flex justify-center">
                      <Trash2 className="w-5 h-5"/>

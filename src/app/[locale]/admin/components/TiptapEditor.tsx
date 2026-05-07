@@ -47,6 +47,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`p-2 rounded hover:bg-earth-dark/10 transition ${editor.isActive('bold') ? 'bg-earth-dark/20 text-earth-dark font-bold' : 'text-earth-dark/70'}`}
+          title="Pogrubienie"
         >
           <Bold className="w-5 h-5" />
         </button>
@@ -54,6 +55,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className={`p-2 rounded hover:bg-earth-dark/10 transition ${editor.isActive('italic') ? 'bg-earth-dark/20 text-earth-dark font-bold' : 'text-earth-dark/70'}`}
+          title="Kursywa"
         >
           <Italic className="w-5 h-5" />
         </button>
@@ -71,6 +73,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className={`p-2 rounded hover:bg-earth-dark/10 transition ${editor.isActive('bulletList') ? 'bg-earth-dark/20 text-earth-dark font-bold' : 'text-earth-dark/70'}`}
+          title="Lista punktowa"
         >
           <List className="w-5 h-5" />
         </button>
@@ -78,6 +81,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           className={`p-2 rounded hover:bg-earth-dark/10 transition ${editor.isActive('orderedList') ? 'bg-earth-dark/20 text-earth-dark font-bold' : 'text-earth-dark/70'}`}
+          title="Lista numerowana"
         >
           <ListOrdered className="w-5 h-5" />
         </button>

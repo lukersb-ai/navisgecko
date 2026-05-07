@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, X, Bug } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
 import Image from 'next/image';
@@ -21,7 +21,7 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="bg-earth-dark text-earth-beige sticky top-0 z-50 shadow-md">
+    <nav className="bg-earth-dark text-earth-beige sticky top-0 z-50 shadow-xl shadow-black/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
           <div className="flex items-center">

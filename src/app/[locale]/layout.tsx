@@ -7,6 +7,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
+import PageTransition from '@/components/PageTransition';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -44,7 +45,9 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages} locale={locale}>
           <Navbar />
           <main className="flex-grow">
-            {children}
+            <PageTransition>
+              {children}
+            </PageTransition>
           </main>
           <Footer />
         </NextIntlClientProvider>

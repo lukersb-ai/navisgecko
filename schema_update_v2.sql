@@ -52,7 +52,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.site_content (id, content_pl, content_en) VALUES 
 ('home_about', '"W naszej hodowli stawiamy na profesjonalizm, pasję połączoną z najwyższą jakością środowiska dla jaszczurek."', '"In our breeding facility, we focus on professionalism."'),
 ('hero_desc', '"Specjalizujemy się w hodowli wysokiej klasy gekonów lamparcich i orzęsionych. Odkryj stworzenia, które skradną Twoje serce."', '"We specialize in breeding high-class geckos."'),
-('contact_info', '"<p>Napisz do nas a z chęcią odpowiemy na każde z Twoich pytań, doradzimy przy wyborze lub zarezerwujemy Twojego przyszłego pupila!</p>"', '"<p>Write to us and we will gladly answer any of your questions!</p>"') 
+('contact_info', '"<p>Napisz do nas, z chęcią odpowiemy na każde z Twoich pytań i doradzimy przy wyborze Twojego przyszłego pupila!</p>"', '"<p>Write to us and we will gladly answer any of your questions!</p>"') 
 ON CONFLICT (id) DO NOTHING;
 
 -- Pre-fill Poradników z oryginalnymi ikonami Lucide, żeby przywrócić design!

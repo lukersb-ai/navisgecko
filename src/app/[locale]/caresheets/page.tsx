@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Link } from '@/i18n/routing';
 import { supabase } from '@/lib/supabase';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, LoaderCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function CaresheetsGalleryPage() {
@@ -16,7 +16,11 @@ export default function CaresheetsGalleryPage() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from('caresheets').select('*');
+      // Fetch only caresheets where the category is not private
+      const { data: categories } = await supabase.from('categories').select('id').eq('isPrivate', false);
+      const publicIds = categories?.map(c => c.id) || [];
+      
+      const { data } = await supabase.from('caresheets').select('*').in('id', publicIds);
       if (data) setCaresheetsDB(data);
       setLoading(false);
     }
@@ -26,39 +30,41 @@ export default function CaresheetsGalleryPage() {
   return (
     <div className="min-h-screen bg-background py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-earth-dark mb-4">{t('pageTitle')}</h1>
-          <p className="text-earth-dark/70 text-lg max-w-2xl mx-auto">
+        <div className="text-center mb-16 relative">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-earth-accent/5 rounded-full blur-3xl -z-10"></div>
+          <h1 className="text-4xl md:text-6xl font-black text-earth-dark mb-4 tracking-tight">{t('pageTitle')}</h1>
+          <div className="w-24 h-1.5 bg-earth-accent rounded-full mx-auto mb-8"></div>
+          <p className="text-xl md:text-2xl text-earth-dark/70 max-w-3xl mx-auto font-medium">
             {t('pageDesc')}
           </p>
         </div>
 
         {loading ? (
-             <div className="flex justify-center p-12"><Loader2 className="w-10 h-10 animate-spin text-earth-accent" /></div>
+             <div className="flex justify-center p-12"><LoaderCircle className="w-10 h-10 animate-spin text-earth-accent" /></div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {caresheetsDB.map((species, index) => (
               <Link key={species.id} href={`/caresheets/${species.id}`} className="group">
                 <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
-                  className="bg-earth-beige/30 rounded-3xl p-8 md:p-10 shadow-md border border-earth-dark/5 hover:border-earth-accent/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between group"
+                  className="bg-white/40 backdrop-blur-sm rounded-[2.5rem] p-10 md:p-12 shadow-xl shadow-earth-dark/5 border border-white/60 hover:border-earth-accent/20 hover:shadow-2xl hover:shadow-earth-accent/5 hover:-translate-y-1.5 transition-all duration-500 h-full flex flex-col justify-between group"
                 >
                   <div className="mb-8">
-                    <div className="w-12 h-1 bg-earth-accent rounded-full mb-6"></div>
-                    <h3 className="text-3xl md:text-4xl font-extrabold text-earth-dark mb-4 leading-tight group-hover:text-earth-accent transition-colors">
+                    <div className="w-12 h-1.5 bg-earth-accent rounded-full mb-8"></div>
+                    <h3 className="text-3xl md:text-4xl font-black text-earth-dark mb-6 leading-tight group-hover:text-earth-accent transition-colors">
                       {isPl ? species.namePl.replace(/Gekony orzęsione/i, 'Gekon orzęsiony').replace(/Gekony lamparcie/i, 'Gekon lamparci').replace(/Gekony/i, 'Gekon') : species.nameEn}
                     </h3>
-                    <p className="text-earth-dark/70 text-lg leading-relaxed line-clamp-3">
+                    <p className="text-earth-dark/70 text-lg md:text-xl leading-relaxed line-clamp-3 font-medium">
                       {isPl ? species.descriptionPl : species.descriptionEn}
                     </p>
                   </div>
                   
-                  <div className="relative z-10 flex items-center justify-end mt-auto pt-6 border-t font-bold text-lg border-earth-dark/10 group-hover:border-earth-accent/30 transition-colors">
-                    <div className="flex items-center text-earth-accent drop-shadow-sm">
+                  <div className="relative z-10 flex items-center justify-end mt-auto pt-8 border-t font-black text-xl border-earth-dark/10 group-hover:border-earth-accent/20 transition-colors">
+                    <div className="flex items-center text-earth-accent">
                       <span>{isPl ? 'Rozpocznij lekturę' : 'Read Guide'}</span>
-                      <ChevronRight className="w-6 h-6 ml-2 group-hover:translate-x-2 transition-transform" />
+                      <ChevronRight className="w-7 h-7 ml-2 group-hover:translate-x-2 transition-transform" />
                     </div>
                   </div>
                 </motion.div>

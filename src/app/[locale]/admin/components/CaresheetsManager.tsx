@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Plus, Trash2, Save, FileText } from 'lucide-react';
+import { LoaderCircle, Plus, Trash2, Save, FileText } from 'lucide-react';
 import TiptapEditor from './TiptapEditor';
 
 export default function CaresheetsManager() {
@@ -113,7 +113,7 @@ export default function CaresheetsManager() {
 
       <div className="p-6 md:p-8">
         {loading ? (
-             <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>
+             <div className="flex justify-center"><LoaderCircle className="w-8 h-8 animate-spin" /></div>
         ) : (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -161,7 +161,7 @@ export default function CaresheetsManager() {
 
             <div className="flex justify-end pt-4 border-t border-earth-dark/10">
               <button disabled={saving} onClick={handleSave} className="flex items-center gap-2 bg-earth-accent hover:bg-earth-dark text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
-                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Zapisz Poradnik
+                {saving ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Zapisz Poradnik
               </button>
             </div>
           </div>

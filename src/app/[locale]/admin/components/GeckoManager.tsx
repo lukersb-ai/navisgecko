@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock } from 'lucide-react';
+import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react';
 
 export default function GeckoManager() {
   const [geckos, setGeckos] = useState<any[]>([]);
@@ -23,13 +23,42 @@ export default function GeckoManager() {
   const [hidePrice, setHidePrice] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [isSecret, setIsSecret] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [filterCategory, setFilterCategory] = useState('all');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -66,8 +95,7 @@ export default function GeckoManager() {
   const handleCreateOrUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const newUrls = await uploadImages();
-    // Combine existing uploaded urls with new ones (limit logic can be applied if needed)
-    // For simplicity, if they select files, we append them. Or if it's new, we just use them.
+    // Combine existing uploaded urls with new ones
     const finalUrls = (imageUrls || []).concat(newUrls);
 
     const payload = {
@@ -81,9 +109,10 @@ export default function GeckoManager() {
       hidePrice,
       isHidden,
       isSecret,
+      isPremium,
       status,
       imageUrls: finalUrls,
-      imageUrl: finalUrls.length > 0 ? finalUrls[0] : null // Fallback for backward compatibility
+      imageUrl: finalUrls.length > 0 ? finalUrls[0] : null 
     };
 
     let error;
@@ -117,7 +146,7 @@ export default function GeckoManager() {
     setHidePrice(g.hidePrice || false);
     setIsHidden(g.isHidden || false);
     setIsSecret(g.isSecret || false);
-    // Backward compatibility for old records that only had imageUrl
+    setIsPremium(g.isPremium || false);
     setImageUrls(g.imageUrls?.length > 0 ? g.imageUrls : (g.imageUrl ? [g.imageUrl] : []));
     setFiles([]);
   };
@@ -133,15 +162,15 @@ export default function GeckoManager() {
     setHidePrice(false);
     setIsHidden(false);
     setIsSecret(false);
+    setIsPremium(false);
     setFiles([]);
     setImageUrls([]);
     if (categories.length > 0) setCategoryId(categories[0].id);
   };
 
   const deleteGecko = async (id: string, storedUrls: string[]) => {
-    if (!confirm('Na pewno chchcesz usunąć tego gekona?')) return;
+    if (!confirm('Na pewno chcesz usunąć tę ofertę?')) return;
     
-    // Attempt removing images from storage silently
     if (storedUrls && storedUrls.length > 0) {
        for (const url of storedUrls) {
           const filePath = url.split('/').pop();
@@ -159,6 +188,12 @@ export default function GeckoManager() {
     setImageUrls(newUrls);
   }
 
+  const removeNewFile = (index: number) => {
+    const newFiles = [...files];
+    newFiles.splice(index, 1);
+    setFiles(newFiles);
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-earth-dark/5 overflow-hidden">
       <div className="p-6 md:p-8 border-b border-earth-dark/10 bg-earth-beige/20 flex justify-between items-center">
@@ -168,86 +203,164 @@ export default function GeckoManager() {
         </div>
         <button
           onClick={() => { resetForm(); setIsAdding(!isAdding); }}
-          className="flex items-center gap-2 bg-earth-dark text-white px-4 py-2 rounded-xl font-bold hover:bg-earth-main"
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${isAdding ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-earth-dark text-white hover:bg-earth-main'}`}
         >
-          {isAdding ? 'Anuluj' : <><Plus className="w-4 h-4"/> Dodaj Ofertę</>}
+          {isAdding ? 'Anuluj' : <><Plus className="w-5 h-5"/> Dodaj Ofertę</>}
         </button>
       </div>
 
       <div className="p-6 md:p-8">
         {loading ? (
-          <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin" /></div>
+          <div className="flex justify-center p-12"><LoaderCircle className="w-8 h-8 animate-spin text-earth-accent" /></div>
         ) : (
           <div className="space-y-8">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-earth-beige/10 p-4 rounded-2xl border border-earth-dark/5">
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <span className="text-sm font-bold text-earth-dark/60 whitespace-nowrap">Filtruj gatunek:</span>
+                <select 
+                  value={filterCategory} 
+                  onChange={e => setFilterCategory(e.target.value)}
+                  className="bg-white border border-earth-dark/10 p-2 rounded-lg text-sm font-bold focus:outline-none focus:border-earth-accent w-full md:min-w-[200px]"
+                >
+                  <option value="all">Wszystkie gatunki</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
+                </select>
+              </div>
+              <div className="text-sm text-earth-dark/40 font-medium">
+                Pokazano {geckos.filter(g => filterCategory === 'all' || g.categoryId === filterCategory).length} z {geckos.length} ofert
+              </div>
+            </div>
+
             {isAdding && (
-              <form onSubmit={handleCreateOrUpdate} className="bg-earth-beige/20 p-6 rounded-xl border border-earth-dark/10 space-y-6 mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div><label className="block text-sm font-bold mb-1">ID (np. LG-01)</label><input required value={internalId} onChange={e=>setInternalId(e.target.value)} className="w-full border p-2 rounded bg-white shadow-sm" /></div>
-                  <div>
-                    <label className="block text-sm font-bold mb-1">Gatunek</label>
-                    <select required value={categoryId} onChange={e=>setCategoryId(e.target.value)} className="w-full border p-2 rounded bg-white shadow-sm">
+              <form onSubmit={handleCreateOrUpdate} className="bg-earth-beige/10 p-8 rounded-3xl border border-earth-dark/5 space-y-8 mb-8 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">ID (np. LG-01)</label>
+                    <input required value={internalId} onChange={e=>setInternalId(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Gatunek</label>
+                    <select required value={categoryId} onChange={e=>setCategoryId(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm">
                       {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
                     </select>
                   </div>
-                  <div><label className="block text-sm font-bold mb-1">Morph (Odmiana)</label><input required value={morph} onChange={e=>setMorph(e.target.value)} className="w-full border p-2 rounded bg-white shadow-sm" /></div>
-                  <div>
-                    <label className="block text-sm font-bold mb-1">Płeć</label>
-                    <select value={gender} onChange={e=>setGender(e.target.value)} className="w-full border p-2 rounded bg-white shadow-sm">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Morph (Odmiana)</label>
+                    <input required value={morph} onChange={e=>setMorph(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Płeć</label>
+                    <select value={gender} onChange={e=>setGender(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm">
                       <option value="Male">Samiec</option><option value="Female">Samica</option><option value="Unsexed">Nieokreślona</option>
                     </select>
                   </div>
-                  <div><label className="block text-sm font-bold mb-1">Waga (g)</label><input type="number" step="0.1" value={weight} onChange={e=>setWeight(e.target.value)} className="w-full border p-2 rounded bg-white shadow-sm" /></div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Waga (g)</label>
+                    <input type="number" step="0.1" value={weight} onChange={e=>setWeight(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm" />
+                  </div>
                   
-                  <div className="bg-white p-3 rounded border border-earth-dark/10 shadow-sm relative">
-                     <label className="block text-sm font-bold mb-1">Cena (PLN)</label>
-                     <input type="number" value={price} onChange={e=>setPrice(e.target.value)} className="w-full border p-2 rounded bg-gray-50 mb-2" />
-                     <label className="block text-sm font-bold mb-1">Cena (EUR)</label>
-                     <input type="number" value={priceEur} onChange={e=>setPriceEur(e.target.value)} className="w-full border p-2 rounded bg-gray-50 mb-2" />
+                  <div className="bg-white p-6 rounded-2xl border-2 border-earth-dark/5 shadow-sm space-y-4">
+                     <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-1">
+                         <label className="block text-xs font-black text-earth-dark/50 uppercase">Cena (PLN)</label>
+                         <input type="number" value={price} onChange={e=>setPrice(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-2 focus:border-earth-accent focus:outline-none transition-colors bg-transparent" />
+                       </div>
+                       <div className="space-y-1">
+                         <label className="block text-xs font-black text-earth-dark/50 uppercase">Cena (EUR)</label>
+                         <input type="number" value={priceEur} onChange={e=>setPriceEur(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-2 focus:border-earth-accent focus:outline-none transition-colors bg-transparent" />
+                       </div>
+                     </div>
                      
-                     <label className="flex items-center gap-2 text-xs font-medium text-earth-dark cursor-pointer select-none mt-2 border-t pt-2 border-earth-dark/10">
-                       <input type="checkbox" checked={hidePrice} onChange={e=>setHidePrice(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4" />
-                       Ukryj cenę (Pokaż "Zapytaj")
-                     </label>
-                     <label className="flex items-center gap-2 text-xs font-medium text-earth-dark cursor-pointer select-none mt-2">
-                       <input type="checkbox" checked={isHidden} onChange={e=>setIsHidden(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4" />
-                       Ukryj całkowicie gekona na stronie
-                     </label>
-                     <label className="flex items-center gap-2 text-xs font-medium text-earth-dark cursor-pointer select-none mt-2">
-                       <input type="checkbox" checked={isSecret} onChange={e=>setIsSecret(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4" />
-                       Tajna oferta (widoczna po podaniu hasła na stronie)
-                     </label>
+                     <div className="space-y-2 pt-2">
+                       <label className="flex items-center gap-3 text-sm font-bold text-earth-dark cursor-pointer group">
+                         <input type="checkbox" checked={hidePrice} onChange={e=>setHidePrice(e.target.checked)} className="rounded-lg text-earth-accent focus:ring-earth-accent w-5 h-5 border-2 border-earth-dark/10" />
+                         <span className="group-hover:text-earth-accent transition-colors">Ukryj cenę (Zapytaj)</span>
+                       </label>
+                       <label className="flex items-center gap-3 text-sm font-bold text-earth-dark cursor-pointer group">
+                         <input type="checkbox" checked={isHidden} onChange={e=>setIsHidden(e.target.checked)} className="rounded-lg text-earth-accent focus:ring-earth-accent w-5 h-5 border-2 border-earth-dark/10" />
+                         <span className="group-hover:text-earth-accent transition-colors">Ukryj gekona na stronie</span>
+                       </label>
+                       <label className="flex items-center gap-3 text-sm font-bold text-earth-dark cursor-pointer group">
+                         <input type="checkbox" checked={isSecret} onChange={e=>setIsSecret(e.target.checked)} className="rounded-lg text-earth-accent focus:ring-earth-accent w-5 h-5 border-2 border-earth-dark/10" />
+                         <span className="group-hover:text-earth-accent transition-colors text-earth-accent">Tajna oferta (na hasło)</span>
+                       </label>
+                       <label className="flex items-center gap-3 text-sm font-bold text-amber-600 cursor-pointer group">
+                         <input type="checkbox" checked={isPremium} onChange={e=>setIsPremium(e.target.checked)} className="rounded-lg text-amber-500 focus:ring-amber-500 w-5 h-5 border-2 border-amber-600/20" />
+                         <span className="group-hover:text-amber-700 transition-colors">Oferta PREMIUM (osobne hasło)</span>
+                       </label>
+                     </div>
                   </div>
 
-                  <div>
-                     <label className="block text-sm font-bold mb-1">Status</label>
-                     <select value={status} onChange={e=>setStatus(e.target.value)} className="w-full border p-2 rounded bg-white shadow-sm font-semibold">
-                      <option value="AVAILABLE" className="text-green-700">Dostępny</option>
-                      <option value="RESERVED" className="text-orange-500">Zarezerwowany</option>
-                      <option value="SOLD" className="text-gray-500">Sprzedany</option>
+                  <div className="space-y-2">
+                     <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Status</label>
+                     <select value={status} onChange={e=>setStatus(e.target.value)} className={`w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm font-black ${status === 'AVAILABLE' ? 'text-green-600' : status === 'RESERVED' ? 'text-orange-500' : 'text-gray-500'}`}>
+                      <option value="AVAILABLE">Dostępny</option>
+                      <option value="RESERVED">Zarezerwowany</option>
+                      <option value="SOLD">Sprzedany</option>
                     </select>
                   </div>
 
-                  <div className="col-span-full border-t border-earth-dark/10 pt-4">
-                     <label className="block text-sm font-bold mb-2">Zdjęcia (Wiele na raz)</label>
-                     {imageUrls.length > 0 && (
-                       <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="col-span-full space-y-4">
+                     <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Galeria Zdjęć</label>
+                     
+                     <div 
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`relative border-4 border-dashed rounded-[2rem] p-10 transition-all duration-300 flex flex-col items-center justify-center gap-4 group ${isDragging ? 'border-earth-accent bg-earth-accent/5 scale-[0.99]' : 'border-earth-dark/10 bg-white hover:border-earth-dark/20'}`}
+                     >
+                        <input 
+                          type="file" 
+                          multiple 
+                          accept="image/*" 
+                          onChange={handleFileSelect} 
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                        />
+                        <div className={`p-6 rounded-full transition-colors ${isDragging ? 'bg-earth-accent text-white' : 'bg-earth-beige text-earth-dark group-hover:bg-earth-dark group-hover:text-white'}`}>
+                          <Upload className="w-10 h-10" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xl font-black text-earth-dark">Przeciągnij zdjęcia tutaj</p>
+                          <p className="text-earth-dark/50 font-bold">lub kliknij, aby wybrać pliki z dysku</p>
+                        </div>
+                     </div>
+
+                     {(imageUrls.length > 0 || files.length > 0) && (
+                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 mt-6">
                          {imageUrls.map((url, i) => (
-                           <div key={i} className="relative group">
-                             <img src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-gray-300" />
-                             <button type="button" onClick={() => removeOldImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                               <Trash2 className="w-3 h-3" />
-                             </button>
+                           <div key={`old-${i}`} className="relative aspect-square group rounded-2xl overflow-hidden border-2 border-earth-dark/10 shadow-sm">
+                             <img src={url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                               <button type="button" onClick={() => removeOldImage(i)} className="bg-red-500 text-white p-2 rounded-xl hover:bg-red-600 transition-colors shadow-lg">
+                                 <Trash2 className="w-5 h-5" />
+                               </button>
+                             </div>
+                             {i === 0 && <div className="absolute top-2 left-2 bg-earth-accent text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase">Główne</div>}
+                           </div>
+                         ))}
+                         {files.map((file, i) => (
+                           <div key={`new-${i}`} className="relative aspect-square group rounded-2xl overflow-hidden border-2 border-earth-accent/30 shadow-sm bg-earth-accent/5">
+                             <div className="w-full h-full flex items-center justify-center flex-col p-2 text-center">
+                               <Upload className="w-6 h-6 text-earth-accent mb-1" />
+                               <span className="text-[10px] font-bold text-earth-accent truncate w-full">{file.name}</span>
+                             </div>
+                             <div className="absolute inset-0 bg-earth-accent/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                               <button type="button" onClick={() => removeNewFile(i)} className="bg-red-500 text-white p-2 rounded-xl hover:bg-red-600 transition-colors shadow-lg">
+                                 <Trash2 className="w-5 h-5" />
+                               </button>
+                             </div>
+                             <div className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase">Nowe</div>
                            </div>
                          ))}
                        </div>
                      )}
-                     <input type="file" multiple accept="image/*" onChange={e => setFiles(Array.from(e.target.files || []))} className="w-full text-sm bg-white p-2 rounded border border-dashed border-gray-400" />
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4">
-                  <button type="submit" disabled={uploading} className="bg-earth-accent hover:bg-earth-dark text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2">
-                    {uploading && <Loader2 className="w-4 h-4 animate-spin"/>} {editingId ? 'Zaktualizuj Ofertę' : 'Dodaj Ofertę'}
+                <div className="flex justify-end pt-8 border-t border-earth-dark/5">
+                  <button type="submit" disabled={uploading} className="bg-earth-accent hover:bg-earth-dark text-white px-10 py-4 rounded-2xl font-black text-xl flex items-center gap-3 transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-earth-accent/20 disabled:opacity-50 disabled:pointer-events-none">
+                    {uploading ? <LoaderCircle className="w-6 h-6 animate-spin"/> : <Plus className="w-6 h-6"/>}
+                    {editingId ? 'Zaktualizuj Ofertę' : 'Dodaj Ofertę'}
                   </button>
                 </div>
               </form>
@@ -266,7 +379,14 @@ export default function GeckoManager() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-earth-dark/5">
-                  {geckos.map(g => (
+                  {geckos
+                    .filter(g => filterCategory === 'all' || g.categoryId === filterCategory)
+                    .sort((a, b) => {
+                      const catA = categories.find(c => c.id === a.categoryId)?.namePl || '';
+                      const catB = categories.find(c => c.id === b.categoryId)?.namePl || '';
+                      return catA.localeCompare(catB);
+                    })
+                    .map(g => (
                     <tr key={g.id} className={`hover:bg-earth-beige/20 transition-colors ${g.isHidden ? 'opacity-50 grayscale' : ''}`}>
                       <td className="p-4 w-24">
                         {(g.imageUrls && g.imageUrls.length > 0) || g.imageUrl ? (
@@ -275,10 +395,18 @@ export default function GeckoManager() {
                       </td>
                       <td className="p-4">
                         <div className="font-bold">{g.internalId}</div>
-                        <div className={`mt-1 font-bold ${g.hidePrice ? 'text-gray-400 line-through' : 'text-earth-main'}`}>
-                          {g.price ? `${g.price} PLN` : '-'} / {g.priceEur ? `${g.priceEur} EUR` : '-'}
+                        <div className="flex flex-col gap-1">
+                          <div className={`text-sm font-bold ${g.hidePrice ? 'text-earth-accent' : 'text-earth-main'}`}>
+                            {g.price ? `${g.price} PLN` : '-'} / {g.priceEur ? `${g.priceEur} EUR` : '-'}
+                          </div>
+                          {g.hidePrice && (
+                            <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-tighter bg-earth-accent/10 text-earth-accent px-1.5 py-0.5 rounded w-fit border border-earth-accent/20">
+                              <EyeOff className="w-2.5 h-2.5" /> Ukryta (Zapytaj)
+                            </div>
+                          )}
                         </div>
-                        {g.isSecret && <div className="mt-1 flex items-center gap-1 text-xs text-earth-accent font-bold"><Lock className="w-3 h-3"/> Tajna oferta</div>}
+                        {g.isSecret && <div className="mt-1 flex items-center gap-1 text-[10px] uppercase font-black text-earth-dark/40"><Lock className="w-2.5 h-2.5"/> Tajna oferta</div>}
+                        {g.isPremium && <div className="mt-0.5 flex items-center gap-1 text-[10px] uppercase font-black text-amber-600"><ShieldCheck className="w-2.5 h-2.5"/> Oferta Premium</div>}
                       </td>
                       <td className="p-4">
                         <div className="font-medium text-earth-dark">{g.morph}</div>

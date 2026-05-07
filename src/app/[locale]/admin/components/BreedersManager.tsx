@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Trash2, Plus, Edit, Image as ImageIcon } from 'lucide-react';
+import { LoaderCircle, Trash2, Plus, Edit, Image as ImageIcon } from 'lucide-react';
 
 export default function BreedersManager() {
   const [breeders, setBreeders] = useState<any[]>([]);
@@ -138,7 +138,7 @@ export default function BreedersManager() {
 
       <div className="p-6 md:p-8">
         {loading ? (
-             <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>
+             <div className="flex justify-center"><LoaderCircle className="w-8 h-8 animate-spin" /></div>
         ) : (
           <div className="space-y-8">
             {isAdding && (
@@ -161,7 +161,7 @@ export default function BreedersManager() {
                  </div>
                  <div className="flex justify-end pt-4">
                     <button type="submit" disabled={uploading} className="bg-earth-accent hover:bg-earth-dark text-white px-8 py-2 rounded-xl font-bold flex items-center gap-2">
-                      {uploading && <Loader2 className="w-4 h-4 animate-spin"/>} Zapisz
+                      {uploading && <LoaderCircle className="w-4 h-4 animate-spin"/>} Zapisz
                     </button>
                  </div>
               </form>

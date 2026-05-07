@@ -2,16 +2,20 @@
 
 import { logoutAction } from '@/app/actions/adminAuth';
 import { useRouter } from 'next/navigation';
-import { LogOut, Image as ImageIcon, CheckCircle, LayoutDashboard, Settings } from 'lucide-react';
-import GeckoManager from './components/GeckoManager';
-import SiteContentManager from './components/SiteContentManager';
-import CaresheetsManager from './components/CaresheetsManager';
-import CategoriesManager from './components/CategoriesManager';
-import BreedersManager from './components/BreedersManager';
-import TranslationsManager from './components/TranslationsManager';
+import { LogOut } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
-
 import { supabase } from '@/lib/supabase';
+
+// Dynamic imports for optimization
+const GeckoManager = dynamic(() => import('./components/GeckoManager'), { loading: () => <div className="p-12 text-center text-earth-dark/40 font-bold animate-pulse">Ładowanie Menedżera Ofert...</div> });
+const SiteContentManager = dynamic(() => import('./components/SiteContentManager'), { loading: () => <div className="p-12 text-center text-earth-dark/40 font-bold animate-pulse">Ładowanie Treści...</div> });
+const CaresheetsManager = dynamic(() => import('./components/CaresheetsManager'), { loading: () => <div className="p-12 text-center text-earth-dark/40 font-bold animate-pulse">Ładowanie Poradników...</div> });
+const CategoriesManager = dynamic(() => import('./components/CategoriesManager'), { loading: () => <div className="p-12 text-center text-earth-dark/40 font-bold animate-pulse">Ładowanie Kategorii...</div> });
+const BreedersManager = dynamic(() => import('./components/BreedersManager'), { loading: () => <div className="p-12 text-center text-earth-dark/40 font-bold animate-pulse">Ładowanie Hodowli...</div> });
+const TranslationsManager = dynamic(() => import('./components/TranslationsManager'), { loading: () => <div className="p-12 text-center text-earth-dark/40 font-bold animate-pulse">Ładowanie Tłumaczeń...</div> });
+const SettingsManager = dynamic(() => import('./components/SettingsManager'), { loading: () => <div className="p-12 text-center text-earth-dark/40 font-bold animate-pulse">Ładowanie Ustawień...</div> });
+
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -28,7 +32,8 @@ export default function AdminDashboard() {
     { id: 'categories', label: 'Gatunki i Filtry' },
     { id: 'breeders', label: 'Nasza Hodowla' },
     { id: 'geckos', label: 'Sklep / Oferta' },
-    { id: 'caresheets', label: 'Poradniki' }
+    { id: 'caresheets', label: 'Poradniki' },
+    { id: 'settings', label: 'Ustawienia' }
   ];
 
   return (
@@ -74,6 +79,7 @@ export default function AdminDashboard() {
         {activeTab === 'breeders' && <BreedersManager />}
         {activeTab === 'geckos' && <GeckoManager />}
         {activeTab === 'caresheets' && <CaresheetsManager />}
+        {activeTab === 'settings' && <SettingsManager />}
       </div>
     </div>
   );
