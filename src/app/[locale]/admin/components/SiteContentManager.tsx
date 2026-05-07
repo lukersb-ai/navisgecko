@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { revalidateSiteAction } from '@/app/actions/revalidate';
 import { LoaderCircle, Save, FileText } from 'lucide-react';
 import TiptapEditor from './TiptapEditor';
 
@@ -55,12 +56,9 @@ export default function SiteContentManager() {
     if (error) {
       alert('Błąd podczas zapisu: ' + error.message);
     } else {
-      // Trigger on-demand revalidation so changes appear immediately
-      await fetch('/api/revalidate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: process.env.NEXT_PUBLIC_REVALIDATE_SECRET }),
-      });
+      // Trigger on-demand revalidation via authenticated server action
+      // (no secret token needed on the client side)
+      await revalidateSiteAction();
       alert('Treść pomyślnie zapisana! Strona zostanie zaktualizowana.');
     }
     setSaving(false);

@@ -81,7 +81,7 @@ export default function GeckoManager() {
     
     for (const file of files) {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const { error } = await supabase.storage.from('geckos').upload(fileName, file);
       if (!error) {
         const { data } = supabase.storage.from('geckos').getPublicUrl(fileName);

@@ -2,7 +2,9 @@
 
 import fs from 'fs';
 import path from 'path';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
+/** Returns the current translations from disk. No auth needed (read-only). */
 export async function getTranslationsList() {
   try {
     const plPath = path.join(process.cwd(), 'messages/pl.json');
@@ -17,7 +19,17 @@ export async function getTranslationsList() {
   }
 }
 
-export async function saveTranslationsList(plData: any, enData: any) {
+/** Overwrites translation files. Requires an active admin session. */
+export async function saveTranslationsList(plData: unknown, enData: unknown) {
+  // ── Auth guard ──────────────────────────────────────────────────────────────
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    console.error('saveTranslationsList: unauthorized call rejected');
+    return { success: false, error: 'Brak uprawnień.' };
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   try {
     const plPath = path.join(process.cwd(), 'messages/pl.json');
     const enPath = path.join(process.cwd(), 'messages/en.json');

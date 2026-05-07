@@ -21,7 +21,7 @@ export async function getGeckosAction() {
     if (g.isHidden) return false;
 
     // 2. Ochrona kategorii Premium/Private
-    const category = cRes.data.find(c => c.id === g.categoryId);
+    const category = cRes.data.find((c: any) => c.id === g.categoryId);
     const isCategoryPrivate = category?.isPrivate === true;
     if (isCategoryPrivate && !isPremiumRevealed) return false;
 
@@ -29,14 +29,13 @@ export async function getGeckosAction() {
     if (g.isPremium === true && !isPremiumRevealed) return false;
 
     // 4. Ochrona Tajnej Oferty (standardowej)
-    // Jeśli oferta jest Secret, ale NIE Premium, odsłaniamy hasłem standardowym
     if (g.isSecret === true && !isRevealed) return false;
 
     return true;
   });
 
   if (!isRevealed) {
-    geckos = geckos.map(g => {
+    geckos = geckos.map((g: any) => {
       if (g.hidePrice) {
         return { ...g, price: null, priceEur: null };
       }
@@ -44,41 +43,39 @@ export async function getGeckosAction() {
     });
   }
 
-  const finalCategoryIds = Array.from(new Set(geckos.map(g => g.categoryId)));
-  const finalCategories = cRes.data.filter(c => finalCategoryIds.includes(c.id) || (c.isPrivate && isPremiumRevealed) || !c.isPrivate);
+  const finalCategoryIds = Array.from(new Set(geckos.map((g: any) => g.categoryId)));
+  const finalCategories = cRes.data.filter((c: any) => finalCategoryIds.includes(c.id) || (c.isPrivate && isPremiumRevealed) || !c.isPrivate);
 
   return { geckos, categories: finalCategories, isRevealed, isPremiumRevealed };
 }
 
 export async function verifyPricePassword(password: string) {
-  // Use secure RPC function to check passwords without revealing them to the client
+  // Use secure RPC functions to check passwords without revealing them to the client.
+  // If the RPC call fails (DB error, network issue) we DENY access – no env fallback.
   const [resPrice, resPremium] = await Promise.all([
     supabase.rpc('check_app_setting', { setting_id: 'price_password', input_value: password }),
     supabase.rpc('check_app_setting', { setting_id: 'premium_password', input_value: password })
   ]);
-  
-  const isCorrectPremium = resPremium.data === true;
-  const isCorrectPrice = resPrice.data === true;
 
-  // Fallback to environment variables if DB function fails or doesn't find the setting
-  const expectedPrice = process.env.PRICE_PASSWORD || process.env.NEXT_PUBLIC_PRICE_PASSWORD || 'navis';
-  const expectedPremium = process.env.PREMIUM_PASSWORD || 'premium-navis';
-  
+  const isCorrectPremium = resPremium.data === true && !resPremium.error;
+  const isCorrectPrice   = resPrice.data  === true && !resPrice.error;
+
+  // Security delay to slow down brute-force attacks (even for parallel requests this adds cost)
+  await new Promise(resolve => setTimeout(resolve, 800));
+
   const cookieStore = await cookies();
 
-  if (isCorrectPremium || password === expectedPremium) {
-    cookieStore.set('prices_revealed', 'true', { path: '/' });
-    cookieStore.set('premium_revealed', 'true', { path: '/' });
+  if (isCorrectPremium) {
+    cookieStore.set('prices_revealed',  'true', { path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+    cookieStore.set('premium_revealed', 'true', { path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
     return true;
   }
 
-  if (isCorrectPrice || password === expectedPrice) {
-    cookieStore.set('prices_revealed', 'true', { path: '/' });
+  if (isCorrectPrice) {
+    cookieStore.set('prices_revealed', 'true', { path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
     return true;
   }
 
-  // Security delay to slow down brute-force attacks
-  await new Promise(resolve => setTimeout(resolve, 1000));
   return false;
 }
 
