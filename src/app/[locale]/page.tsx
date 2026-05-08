@@ -52,9 +52,9 @@ export default async function Home({ params }: { params: { locale: string } }) {
             />
             <Link
               href="/available"
-              className="inline-flex items-center gap-2 bg-earth-accent hover:bg-earth-brown text-earth-beige px-8 py-4 rounded-full font-bold text-lg transition-[background-color,transform,box-shadow] duration-300 hover:scale-105 shadow-xl hover:shadow-earth-accent/30 relative overflow-hidden group"
+              className="inline-flex items-center gap-2 bg-earth-accent hover:bg-[#f08c41] text-earth-beige px-8 py-4 rounded-full font-bold text-lg transition-all duration-500 ease-out hover:scale-105 shadow-xl hover:shadow-earth-accent/40 relative overflow-hidden group"
               style={{ 
-                willChange: 'transform',
+                willChange: 'transform, background-color',
                 backfaceVisibility: 'hidden',
                 WebkitFontSmoothing: 'antialiased'
               }}
@@ -72,7 +72,7 @@ export default async function Home({ params }: { params: { locale: string } }) {
       </div>
 
       {/* About Section */}
-      <section id="about" className="py-24 bg-earth-beige relative">
+      <section id="about" className="py-24 bg-earth-beige relative scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             {/* Tekst - "O nas" */}

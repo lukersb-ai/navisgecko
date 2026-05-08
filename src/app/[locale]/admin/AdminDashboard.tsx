@@ -19,7 +19,7 @@ const SettingsManager = dynamic(() => import('./components/SettingsManager'), { 
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('content');
+  const [activeTab, setActiveTab] = useState('geckos');
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -28,31 +28,30 @@ export default function AdminDashboard() {
   };
 
   const tabs = [
-    { id: 'content', label: 'Teksty, Tłumaczenia i Treści (CMS)' },
+    { id: 'geckos', label: 'Sklep / Oferta' },
     { id: 'categories', label: 'Gatunki i Filtry' },
     { id: 'breeders', label: 'Nasza Hodowla' },
-    { id: 'geckos', label: 'Sklep / Oferta' },
     { id: 'caresheets', label: 'Poradniki' },
-    { id: 'settings', label: 'Ustawienia' }
+    { id: 'settings', label: 'Ustawienia' },
+    { id: 'content', label: 'Teksty, Tłumaczenia i Treści (CMS)' }
   ];
 
   return (
-    <div className="min-h-[80vh] py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8 border-b border-earth-dark/10 pb-6">
+    <div className="min-h-[80vh] pt-4 pb-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-3 border-b border-earth-dark/10 pb-3 pt-1.5">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-earth-dark">Dashboard</h1>
-          <p className="text-earth-dark/60 mt-2">Zarządzaj potężnym systemem CMS jaszczurek</p>
+          <h1 className="text-xl md:text-2xl font-bold text-earth-dark">Dashboard</h1>
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium"
+          className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm"
         >
           <LogOut className="w-4 h-4" />
           Wyloguj
         </button>
       </div>
 
-      <div className="mb-8 flex overflow-x-auto gap-2 bg-white p-2 rounded-xl border border-earth-dark/5 shadow-sm">
+      <div className="mb-5 flex overflow-x-auto gap-2 bg-white p-2 rounded-xl border border-earth-dark/5 shadow-sm">
         {tabs.map(tab => (
           <button 
             key={tab.id}

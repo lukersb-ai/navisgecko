@@ -43,7 +43,9 @@
     "weight": "Waga",
     "birthDate": "Data klucia",
     "noData": "Brak danych",
-    "details": "Szczegóły i historia",
+    "details": "Rozwiń",
+    "showLess": "Zwiń",
+    "info": "Informacje",
     "reserve": "Zapytaj",
     "reserved": "Zarezerwowany",
     "noResults": "Brak zwierząt spełniających kryteria.",
@@ -82,6 +84,8 @@
     "terrariumTitle": "Terrarium",
     "terrariumDesc": "Wymiary docelowe, dobór podłoża i aranżacja.",
     "handlingTitle": "Oswajanie i kontakt",
-    "handlingDesc": "Jak budować relacje z gekonem i unikać stresu."
+    "handlingDesc": "Jak budować relacje z gekonem i unikać stresu.",
+    "readMore": "Rozpocznij lekturę",
+    "empty": "Baza poradników jest pusta. Użyj panelu administratora, aby dodać gatunki."
   }
 }

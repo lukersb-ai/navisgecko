@@ -92,17 +92,17 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-2xl font-bold text-earth-dark">
             {gecko.hidePrice && (!pricesRevealed || ['sold', 'reserved'].includes(gecko.status?.toLowerCase()))
-              ? t('askPrice') || 'Zapytaj' 
+              ? t('askPrice')
               : (locale === 'en' 
-                 ? (gecko.priceEur ? `${gecko.priceEur} EUR` : t('askPrice') || 'Ask')
-                 : (gecko.price ? `${gecko.price} PLN` : t('askPrice') || 'Zapytaj')
+                 ? (gecko.priceEur ? `${gecko.priceEur} EUR` : t('askPrice'))
+                 : (gecko.price ? `${gecko.price} PLN` : t('askPrice'))
                 )
             }
           </h3>
           <span className="text-sm font-mono text-earth-dark/50 bg-earth-beige/50 px-2 py-1 rounded">{t('id')}: {gecko.internalId}</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <motion.div layout className="grid grid-cols-2 gap-4 mb-3">
           <div className="flex flex-col">
             <span className="text-xs text-earth-dark/50 uppercase tracking-wider mb-1 flex items-center gap-1"><Dna className="w-3 h-3"/> {t('morph')}</span>
             <span className="font-semibold text-earth-main">{gecko.morph}</span>
@@ -115,43 +115,56 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
             <span className="text-xs text-earth-dark/50 uppercase tracking-wider mb-1 flex items-center gap-1"><Weight className="w-3 h-3"/> {t('weight')}</span>
             <span className="font-medium text-earth-dark">{gecko.weight || 0}g</span>
           </div>
-        </div>
 
-        {/* Expandable Description Button */}
-        {gecko.description && (
-          <button
-            onClick={toggleExpand}
-            className="w-full flex items-center justify-between text-earth-dark/80 bg-earth-beige/30 hover:bg-earth-beige/50 p-3 rounded-lg transition-colors font-medium text-sm mt-auto mb-6"
-          >
-            <span className="flex items-center gap-2"><Info className="w-4 h-4"/> {t('details')}</span>
-            <motion.div
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ChevronDown className="w-5 h-5" />
-            </motion.div>
-          </button>
-        )}
+          {/* Details Button - Neutral & Medium-Small */}
+          {gecko.description && (
+            <div className="flex flex-col">
+              <span className="text-[10px] text-earth-dark/40 uppercase tracking-widest mb-1">{t('info')}</span>
+              <button
+                onClick={toggleExpand}
+                className="flex items-center gap-1 text-earth-dark/60 hover:text-earth-dark transition-all font-bold text-[10px] uppercase tracking-wider w-fit group ml-1 mt-0.5"
+              >
+                <Info className="w-2.5 h-2.5 text-earth-dark/30 group-hover:text-earth-dark/50 transition-colors" />
+                <span className="border-b border-earth-dark/10 group-hover:border-earth-dark/30 transition-colors">
+                  {expanded ? t('showLess') : t('details')}
+                </span>
+                <motion.div
+                  animate={{ rotate: expanded ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronDown className="w-3.5 h-3.5 opacity-20 group-hover:opacity-50" />
+                </motion.div>
+              </button>
+            </div>
+          )}
+        </motion.div>
 
-        {/* Expanded Details using Framer Motion */}
-        <AnimatePresence>
+        {/* Expanded Details BELOW the grid */}
+        <AnimatePresence initial={false}>
           {expanded && (
             <motion.div
+              key="details"
+              layout
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+              transition={{ 
+                height: { type: "spring", stiffness: 200, damping: 25 },
+                opacity: { duration: 0.15 }
+              }}
               className="overflow-hidden"
             >
-              <div className="pt-2 pb-6 text-earth-dark/80 text-sm leading-relaxed border-t border-earth-dark/5 mt-2">
-                {gecko.description}
+              <div className="pt-2 pb-3 text-earth-dark/70 text-[13px] leading-relaxed border-t border-earth-dark/5">
+                <p className="italic">
+                  {locale === 'pl' ? gecko.description : (gecko.description_en || gecko.description)}
+                </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
         
         {/* Buy Button */}
-        <div className={gecko.description ? '' : 'mt-auto'}>
+        <motion.div layout className={gecko.description ? '' : 'mt-auto'}>
           <Link
             href={`/contact?gecko=${gecko.internalId}`}
             className={`w-full flex justify-center items-center gap-2 py-3.5 rounded-xl font-bold transition-all duration-300 ${
@@ -166,7 +179,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
               statusLower === 'reserved' ? t('reserved') : t('statusSold')
             )}
           </Link>
-        </div>
+        </motion.div>
 
       </div>
     </div>

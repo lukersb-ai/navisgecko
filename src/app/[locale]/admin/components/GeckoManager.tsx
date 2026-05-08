@@ -24,6 +24,8 @@ export default function GeckoManager() {
   const [isHidden, setIsHidden] = useState(false);
   const [isSecret, setIsSecret] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [description, setDescription] = useState('');
+  const [descriptionEn, setDescriptionEn] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -111,6 +113,8 @@ export default function GeckoManager() {
       isSecret,
       isPremium,
       status,
+      description,
+      description_en: descriptionEn,
       imageUrls: finalUrls,
       imageUrl: finalUrls.length > 0 ? finalUrls[0] : null 
     };
@@ -147,6 +151,8 @@ export default function GeckoManager() {
     setIsHidden(g.isHidden || false);
     setIsSecret(g.isSecret || false);
     setIsPremium(g.isPremium || false);
+    setDescription(g.description || '');
+    setDescriptionEn(g.description_en || '');
     setImageUrls(g.imageUrls?.length > 0 ? g.imageUrls : (g.imageUrl ? [g.imageUrl] : []));
     setFiles([]);
   };
@@ -163,6 +169,8 @@ export default function GeckoManager() {
     setIsHidden(false);
     setIsSecret(false);
     setIsPremium(false);
+    setDescription('');
+    setDescriptionEn('');
     setFiles([]);
     setImageUrls([]);
     if (categories.length > 0) setCategoryId(categories[0].id);
@@ -196,118 +204,152 @@ export default function GeckoManager() {
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-earth-dark/5 overflow-hidden">
-      <div className="p-6 md:p-8 border-b border-earth-dark/10 bg-earth-beige/20 flex justify-between items-center">
+      <div className="p-2 md:p-3 border-b border-earth-dark/10 bg-earth-beige/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-earth-dark">Menedżer Ofert Sklepowych</h2>
-          <p className="text-earth-dark/60 text-sm">Zarządzaj gekonami wystawionymi na sprzedaż.</p>
+          <h2 className="text-2xl font-bold text-earth-dark">Menedżer Ofert</h2>
         </div>
-        <button
-          onClick={() => { resetForm(); setIsAdding(!isAdding); }}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${isAdding ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-earth-dark text-white hover:bg-earth-main'}`}
-        >
-          {isAdding ? 'Anuluj' : <><Plus className="w-5 h-5"/> Dodaj Ofertę</>}
-        </button>
+        
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+          {/* Szybki Filtr */}
+          <div className="flex items-center gap-2 bg-white/60 p-1.5 pl-3 rounded-xl border border-earth-dark/10 shadow-sm">
+            <span className="text-[10px] font-black text-earth-dark/40 uppercase tracking-wider">Filtruj:</span>
+            <select 
+              value={filterCategory} 
+              onChange={e => setFilterCategory(e.target.value)}
+              className="bg-transparent border-0 text-sm font-bold focus:outline-none focus:ring-0 text-earth-dark cursor-pointer min-w-[140px]"
+            >
+              <option value="all">Wszystkie gatunki</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
+            </select>
+          </div>
+
+          <button
+            onClick={() => { resetForm(); setIsAdding(!isAdding); }}
+            className={`flex items-center gap-2 px-8 py-3.5 rounded-xl font-black transition-all text-base shadow-md transform hover:scale-105 active:scale-95 ${isAdding ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-earth-dark text-white hover:bg-earth-main'}`}
+          >
+            {isAdding ? 'Anuluj' : <><Plus className="w-5 h-5"/> Dodaj Ofertę</>}
+          </button>
+
+          {isAdding && (
+            <button
+              form="gecko-form"
+              type="submit"
+              disabled={uploading}
+              className="flex items-center gap-2 bg-earth-accent hover:bg-orange-500 text-white px-8 py-3.5 rounded-xl font-black transition-all text-base shadow-md transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {editingId ? 'Zaktualizuj' : 'Dodaj'}
+              {uploading ? <LoaderCircle className="w-5 h-5 animate-spin"/> : <Plus className="w-5 h-5"/>}
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="p-6 md:p-8">
+      <div className="p-6 md:p-8 pt-0">
         {loading ? (
           <div className="flex justify-center p-12"><LoaderCircle className="w-8 h-8 animate-spin text-earth-accent" /></div>
         ) : (
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-earth-beige/10 p-4 rounded-2xl border border-earth-dark/5">
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <span className="text-sm font-bold text-earth-dark/60 whitespace-nowrap">Filtruj gatunek:</span>
-                <select 
-                  value={filterCategory} 
-                  onChange={e => setFilterCategory(e.target.value)}
-                  className="bg-white border border-earth-dark/10 p-2 rounded-lg text-sm font-bold focus:outline-none focus:border-earth-accent w-full md:min-w-[200px]"
-                >
-                  <option value="all">Wszystkie gatunki</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
-                </select>
-              </div>
-              <div className="text-sm text-earth-dark/40 font-medium">
-                Pokazano {geckos.filter(g => filterCategory === 'all' || g.categoryId === filterCategory).length} z {geckos.length} ofert
-              </div>
-            </div>
+          <div className="space-y-6">
 
             {isAdding && (
-              <form onSubmit={handleCreateOrUpdate} className="bg-earth-beige/10 p-8 rounded-3xl border border-earth-dark/5 space-y-8 mb-8 shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">ID (np. LG-01)</label>
-                    <input required value={internalId} onChange={e=>setInternalId(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Gatunek</label>
-                    <select required value={categoryId} onChange={e=>setCategoryId(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm">
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Morph (Odmiana)</label>
-                    <input required value={morph} onChange={e=>setMorph(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Płeć</label>
-                    <select value={gender} onChange={e=>setGender(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm">
-                      <option value="Male">Samiec</option><option value="Female">Samica</option><option value="Unsexed">Nieokreślona</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Waga (g)</label>
-                    <input type="number" step="0.1" value={weight} onChange={e=>setWeight(e.target.value)} className="w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm" />
-                  </div>
-                  
-                  <div className="bg-white p-6 rounded-2xl border-2 border-earth-dark/5 shadow-sm space-y-4">
-                     <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-1">
-                         <label className="block text-xs font-black text-earth-dark/50 uppercase">Cena (PLN)</label>
-                         <input type="number" value={price} onChange={e=>setPrice(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-2 focus:border-earth-accent focus:outline-none transition-colors bg-transparent" />
+              <form id="gecko-form" onSubmit={handleCreateOrUpdate} className="bg-earth-beige/10 p-6 rounded-3xl border border-earth-dark/5 space-y-6 mb-8 shadow-sm">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  {/* Lewa kolumna: Podstawowe dane */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">ID (np. LG-01)</label>
+                        <input required value={internalId} onChange={e=>setInternalId(e.target.value)} className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Gatunek</label>
+                        <select required value={categoryId} onChange={e=>setCategoryId(e.target.value)} className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm">
+                          {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Morph (Odmiana)</label>
+                        <input value={morph} onChange={e=>setMorph(e.target.value)} className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Płeć</label>
+                        <select value={gender} onChange={e=>setGender(e.target.value)} className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm">
+                          <option value="Male">Samiec</option><option value="Female">Samica</option><option value="Unsexed">Nieokreślona</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Waga (g)</label>
+                        <input type="number" step="0.1" value={weight} onChange={e=>setWeight(e.target.value)} className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                         <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Status</label>
+                         <select value={status} onChange={e=>setStatus(e.target.value)} className={`w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm font-black text-sm ${status === 'AVAILABLE' ? 'text-green-600' : status === 'RESERVED' ? 'text-orange-500' : 'text-gray-500'}`}>
+                          <option value="AVAILABLE">Dostępny</option>
+                          <option value="RESERVED">Zarezerwowany</option>
+                          <option value="SOLD">Sprzedany</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-2xl border-2 border-earth-dark/5 shadow-sm space-y-4">
+                       <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1">
+                           <label className="block text-[10px] font-black text-earth-dark/50 uppercase">Cena (PLN)</label>
+                           <input type="number" value={price} onChange={e=>setPrice(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-1.5 focus:border-earth-accent focus:outline-none transition-colors bg-transparent text-sm" />
+                         </div>
+                         <div className="space-y-1">
+                           <label className="block text-[10px] font-black text-earth-dark/50 uppercase">Cena (EUR)</label>
+                           <input type="number" value={priceEur} onChange={e=>setPriceEur(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-1.5 focus:border-earth-accent focus:outline-none transition-colors bg-transparent text-sm" />
+                         </div>
                        </div>
-                       <div className="space-y-1">
-                         <label className="block text-xs font-black text-earth-dark/50 uppercase">Cena (EUR)</label>
-                         <input type="number" value={priceEur} onChange={e=>setPriceEur(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-2 focus:border-earth-accent focus:outline-none transition-colors bg-transparent" />
+                       
+                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-1">
+                         <label className="flex items-center gap-2 text-xs font-bold text-earth-dark cursor-pointer group">
+                           <input type="checkbox" checked={hidePrice} onChange={e=>setHidePrice(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4 border-2 border-earth-dark/10" />
+                           <span className="group-hover:text-earth-accent transition-colors">Ukryj cenę</span>
+                         </label>
+                         <label className="flex items-center gap-2 text-xs font-bold text-earth-dark cursor-pointer group">
+                           <input type="checkbox" checked={isHidden} onChange={e=>setIsHidden(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4 border-2 border-earth-dark/10" />
+                           <span className="group-hover:text-earth-accent transition-colors">Ukryj na stronie</span>
+                         </label>
+                         <label className="flex items-center gap-2 text-xs font-bold text-earth-dark cursor-pointer group">
+                           <input type="checkbox" checked={isSecret} onChange={e=>setIsSecret(e.target.checked)} className="rounded text-earth-accent focus:ring-earth-accent w-4 h-4 border-2 border-earth-dark/10" />
+                           <span className="group-hover:text-earth-accent transition-colors text-earth-accent">Tajna (na hasło)</span>
+                         </label>
+                         <label className="flex items-center gap-2 text-xs font-bold text-amber-600 cursor-pointer group">
+                           <input type="checkbox" checked={isPremium} onChange={e=>setIsPremium(e.target.checked)} className="rounded text-amber-500 focus:ring-amber-500 w-4 h-4 border-2 border-amber-600/20" />
+                           <span className="group-hover:text-amber-700 transition-colors">PREMIUM</span>
+                         </label>
                        </div>
-                     </div>
-                     
-                     <div className="space-y-2 pt-2">
-                       <label className="flex items-center gap-3 text-sm font-bold text-earth-dark cursor-pointer group">
-                         <input type="checkbox" checked={hidePrice} onChange={e=>setHidePrice(e.target.checked)} className="rounded-lg text-earth-accent focus:ring-earth-accent w-5 h-5 border-2 border-earth-dark/10" />
-                         <span className="group-hover:text-earth-accent transition-colors">Ukryj cenę (Zapytaj)</span>
-                       </label>
-                       <label className="flex items-center gap-3 text-sm font-bold text-earth-dark cursor-pointer group">
-                         <input type="checkbox" checked={isHidden} onChange={e=>setIsHidden(e.target.checked)} className="rounded-lg text-earth-accent focus:ring-earth-accent w-5 h-5 border-2 border-earth-dark/10" />
-                         <span className="group-hover:text-earth-accent transition-colors">Ukryj gekona na stronie</span>
-                       </label>
-                       <label className="flex items-center gap-3 text-sm font-bold text-earth-dark cursor-pointer group">
-                         <input type="checkbox" checked={isSecret} onChange={e=>setIsSecret(e.target.checked)} className="rounded-lg text-earth-accent focus:ring-earth-accent w-5 h-5 border-2 border-earth-dark/10" />
-                         <span className="group-hover:text-earth-accent transition-colors text-earth-accent">Tajna oferta (na hasło)</span>
-                       </label>
-                       <label className="flex items-center gap-3 text-sm font-bold text-amber-600 cursor-pointer group">
-                         <input type="checkbox" checked={isPremium} onChange={e=>setIsPremium(e.target.checked)} className="rounded-lg text-amber-500 focus:ring-amber-500 w-5 h-5 border-2 border-amber-600/20" />
-                         <span className="group-hover:text-amber-700 transition-colors">Oferta PREMIUM (osobne hasło)</span>
-                       </label>
-                     </div>
+                       <div className="space-y-1 pt-4">
+                         <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Notatka / Opis (PL)</label>
+                         <textarea 
+                           value={description} 
+                           onChange={e=>setDescription(e.target.value)} 
+                           placeholder="np. Je mrożonki, spokojny charakter..."
+                           className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm h-20 resize-none" 
+                         />
+                       </div>
+                       <div className="space-y-1 pt-2">
+                         <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Note / Description (EN)</label>
+                         <textarea 
+                           value={descriptionEn} 
+                           onChange={e=>setDescriptionEn(e.target.value)} 
+                           placeholder="e.g. Eats frozen food, calm temperament..."
+                           className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm h-20 resize-none" 
+                         />
+                       </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                     <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Status</label>
-                     <select value={status} onChange={e=>setStatus(e.target.value)} className={`w-full border-2 border-earth-dark/5 p-3 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm font-black ${status === 'AVAILABLE' ? 'text-green-600' : status === 'RESERVED' ? 'text-orange-500' : 'text-gray-500'}`}>
-                      <option value="AVAILABLE">Dostępny</option>
-                      <option value="RESERVED">Zarezerwowany</option>
-                      <option value="SOLD">Sprzedany</option>
-                    </select>
-                  </div>
-
-                  <div className="col-span-full space-y-4">
-                     <label className="block text-sm font-black text-earth-dark uppercase tracking-wider">Galeria Zdjęć</label>
+                  {/* Prawa kolumna: Galeria */}
+                  <div className="space-y-4">
+                     <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Galeria Zdjęć</label>
                      
                      <div 
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        className={`relative border-4 border-dashed rounded-[2rem] p-10 transition-all duration-300 flex flex-col items-center justify-center gap-4 group ${isDragging ? 'border-earth-accent bg-earth-accent/5 scale-[0.99]' : 'border-earth-dark/10 bg-white hover:border-earth-dark/20'}`}
+                        className={`relative border-2 border-dashed rounded-2xl p-4 transition-all duration-300 flex flex-col items-center justify-center gap-2 group min-h-[120px] ${isDragging ? 'border-earth-accent bg-earth-accent/5' : 'border-earth-dark/10 bg-white hover:border-earth-dark/20'}`}
                      >
                         <input 
                           type="file" 
@@ -316,40 +358,37 @@ export default function GeckoManager() {
                           onChange={handleFileSelect} 
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                         />
-                        <div className={`p-6 rounded-full transition-colors ${isDragging ? 'bg-earth-accent text-white' : 'bg-earth-beige text-earth-dark group-hover:bg-earth-dark group-hover:text-white'}`}>
-                          <Upload className="w-10 h-10" />
-                        </div>
+                        <Upload className={`w-6 h-6 transition-colors ${isDragging ? 'text-earth-accent' : 'text-earth-dark/30 group-hover:text-earth-accent'}`} />
                         <div className="text-center">
-                          <p className="text-xl font-black text-earth-dark">Przeciągnij zdjęcia tutaj</p>
-                          <p className="text-earth-dark/50 font-bold">lub kliknij, aby wybrać pliki z dysku</p>
+                          <p className="text-sm font-black text-earth-dark">Przeciągnij zdjęcia lub kliknij</p>
                         </div>
-                     </div>
+                      </div>
 
                      {(imageUrls.length > 0 || files.length > 0) && (
-                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 mt-6">
+                       <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2 max-h-[180px] overflow-y-auto p-1">
                          {imageUrls.map((url, i) => (
-                           <div key={`old-${i}`} className="relative aspect-square group rounded-2xl overflow-hidden border-2 border-earth-dark/10 shadow-sm">
+                           <div key={`old-${i}`} className="relative aspect-square group rounded-lg overflow-hidden border border-earth-dark/10 shadow-sm">
                              <img src={url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                               <button type="button" onClick={() => removeOldImage(i)} className="bg-red-500 text-white p-2 rounded-xl hover:bg-red-600 transition-colors shadow-lg">
-                                 <Trash2 className="w-5 h-5" />
+                               <button type="button" onClick={() => removeOldImage(i)} className="bg-red-500 text-white p-1 rounded-md hover:bg-red-600 transition-colors">
+                                 <Trash2 className="w-3.5 h-3.5" />
                                </button>
                              </div>
-                             {i === 0 && <div className="absolute top-2 left-2 bg-earth-accent text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase">Główne</div>}
+                             {i === 0 && <div className="absolute top-1 left-1 bg-earth-accent text-white text-[8px] font-black px-1 py-0.5 rounded shadow-md uppercase">Główne</div>}
                            </div>
                          ))}
                          {files.map((file, i) => (
-                           <div key={`new-${i}`} className="relative aspect-square group rounded-2xl overflow-hidden border-2 border-earth-accent/30 shadow-sm bg-earth-accent/5">
-                             <div className="w-full h-full flex items-center justify-center flex-col p-2 text-center">
-                               <Upload className="w-6 h-6 text-earth-accent mb-1" />
-                               <span className="text-[10px] font-bold text-earth-accent truncate w-full">{file.name}</span>
+                           <div key={`new-${i}`} className="relative aspect-square group rounded-lg overflow-hidden border border-earth-accent/30 shadow-sm bg-earth-accent/5">
+                             <div className="w-full h-full flex items-center justify-center flex-col p-1 text-center">
+                               <Upload className="w-4 h-4 text-earth-accent mb-0.5" />
+                               <span className="text-[8px] font-bold text-earth-accent truncate w-full">{file.name}</span>
                              </div>
                              <div className="absolute inset-0 bg-earth-accent/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                               <button type="button" onClick={() => removeNewFile(i)} className="bg-red-500 text-white p-2 rounded-xl hover:bg-red-600 transition-colors shadow-lg">
-                                 <Trash2 className="w-5 h-5" />
+                               <button type="button" onClick={() => removeNewFile(i)} className="bg-red-500 text-white p-1 rounded-md hover:bg-red-600 transition-colors">
+                                 <Trash2 className="w-3.5 h-3.5" />
                                </button>
                              </div>
-                             <div className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase">Nowe</div>
+                             <div className="absolute top-1 left-1 bg-blue-500 text-white text-[8px] font-black px-1 py-0.5 rounded shadow-md uppercase">Nowe</div>
                            </div>
                          ))}
                        </div>
@@ -357,12 +396,6 @@ export default function GeckoManager() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-8 border-t border-earth-dark/5">
-                  <button type="submit" disabled={uploading} className="bg-earth-accent hover:bg-earth-dark text-white px-10 py-4 rounded-2xl font-black text-xl flex items-center gap-3 transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-earth-accent/20 disabled:opacity-50 disabled:pointer-events-none">
-                    {uploading ? <LoaderCircle className="w-6 h-6 animate-spin"/> : <Plus className="w-6 h-6"/>}
-                    {editingId ? 'Zaktualizuj Ofertę' : 'Dodaj Ofertę'}
-                  </button>
-                </div>
               </form>
             )}
 
@@ -411,6 +444,11 @@ export default function GeckoManager() {
                       <td className="p-4">
                         <div className="font-medium text-earth-dark">{g.morph}</div>
                         <div className="text-xs text-earth-dark/50 mt-0.5">{categories.find(c => c.id === g.categoryId)?.namePl || g.categoryId}</div>
+                        {g.description && (
+                          <div className="mt-2 text-[10px] text-earth-dark/40 bg-earth-beige/40 p-1.5 rounded border border-earth-dark/5 italic leading-tight max-w-[200px]">
+                            {g.description}
+                          </div>
+                        )}
                       </td>
                       <td className="p-4 text-earth-dark/80">{g.gender} <br/><span className="text-xs font-mono">{g.weight}g</span></td>
                       <td className="p-4">

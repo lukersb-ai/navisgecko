@@ -25,16 +25,16 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center hover:opacity-80 transition">
+            <Link href="/" className="flex items-center group transition-all duration-300 hover:scale-105">
               <Image 
                  src="/logo-clean.png" 
                  alt="Navis Gecko Logo" 
                  width={80} 
                  height={80} 
-                 className="object-contain shrink-0" 
+                 className="object-contain shrink-0 transition-all duration-300 group-hover:drop-shadow-[0_0_10px_rgba(232,115,23,0.6)] group-hover:scale-110" 
                  priority
               />
-              <span className="-ml-3 mt-1 font-bold text-lg md:text-xl text-earth-beige/90 tracking-tight whitespace-nowrap">Navis Gecko</span>
+              <span className="-ml-3 mt-1 font-bold text-lg md:text-xl text-earth-beige/90 tracking-tight whitespace-nowrap group-hover:text-earth-accent transition-all">Navis Gecko</span>
             </Link>
           </div>
           

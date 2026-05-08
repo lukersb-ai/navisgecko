@@ -63,7 +63,7 @@ export default function CaresheetsGalleryPage() {
                   
                   <div className="relative z-10 flex items-center justify-end mt-auto pt-8 border-t font-black text-xl border-earth-dark/10 group-hover:border-earth-accent/20 transition-colors">
                     <div className="flex items-center text-earth-accent">
-                      <span>{isPl ? 'Rozpocznij lekturę' : 'Read Guide'}</span>
+                      <span>{t('readMore')}</span>
                       <ChevronRight className="w-7 h-7 ml-2 group-hover:translate-x-2 transition-transform" />
                     </div>
                   </div>
@@ -71,8 +71,8 @@ export default function CaresheetsGalleryPage() {
               </Link>
             ))}
             {caresheetsDB.length === 0 && (
-              <div className="col-span-full text-center text-earth-dark/60 py-12 border-2 border-dashed border-earth-dark/20 rounded-xl">
-                 Baza poradników jest pusta. Użyj panelu administratora, aby dodać gatunki.
+              <div className="col-span-full text-center text-earth-dark/60 py-12 border-2 border-dashed border-earth-dark/20 rounded-xl font-medium">
+                 {t('empty')}
               </div>
             )}
           </div>
