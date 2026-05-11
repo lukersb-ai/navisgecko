@@ -28,9 +28,9 @@ export async function revalidateSiteAction(): Promise<{ success: boolean; error?
   revalidatePath('/en/caresheets');
 
   // Wyczyść Cache Danych dla poszczególnych zasobów
-  revalidateTag('geckos');
-  revalidateTag('breeders');
-  revalidateTag('categories');
+  revalidateTag('geckos', { expire: 0 });
+  revalidateTag('breeders', { expire: 0 });
+  revalidateTag('categories', { expire: 0 });
 
   return { success: true };
 }
