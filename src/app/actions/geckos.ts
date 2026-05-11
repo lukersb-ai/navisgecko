@@ -44,7 +44,7 @@ export async function getGeckosAction() {
   }
 
   const finalCategoryIds = Array.from(new Set(geckos.map((g: any) => g.categoryId)));
-  const finalCategories = cRes.data.filter((c: any) => finalCategoryIds.includes(c.id) || (c.isPrivate && isPremiumRevealed) || !c.isPrivate);
+  const finalCategories = cRes.data.filter((c: any) => finalCategoryIds.includes(c.id));
 
   return { geckos, categories: finalCategories, isRevealed, isPremiumRevealed };
 }

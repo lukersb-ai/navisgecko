@@ -19,6 +19,10 @@ export default async function Home({ params }: { params: { locale: string } }) {
   // Fetch Breeders and Categories (Specific columns only)
   const { data: breeders } = await supabase.from('breeders').select('id, name, imageUrl, categoryId').order('created_at', { ascending: false });
   const { data: categories } = await supabase.from('categories').select('id, namePl, nameEn, isPrivate').eq('isPrivate', false);
+  
+  // Filter categories to only those that have breeders
+  const breederCategoryIds = new Set(breeders?.map(b => b.categoryId) || []);
+  const activeCategories = (categories || []).filter(c => breederCategoryIds.has(c.id));
 
   const aboutHtml = locale === 'pl' ? aboutData?.content_pl : aboutData?.content_en;
   const heroHtml = locale === 'pl' ? heroData?.content_pl : heroData?.content_en;
@@ -111,7 +115,7 @@ export default async function Home({ params }: { params: { locale: string } }) {
 
           <BreedersList 
             breeders={breeders || []} 
-            categories={categories || []} 
+            categories={activeCategories} 
             locale={locale} 
           />
           
