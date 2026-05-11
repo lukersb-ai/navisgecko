@@ -1,6 +1,7 @@
 'use server';
 
 import { supabase } from '@/lib/supabase';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
 
 export async function getGeckosAction() {
@@ -50,11 +51,14 @@ export async function getGeckosAction() {
 }
 
 export async function verifyPricePassword(password: string) {
-  // Use secure RPC functions to check passwords without revealing them to the client.
-  // If the RPC call fails (DB error, network issue) we DENY access – no env fallback.
+  // Try to use Admin client (service role) to bypass RLS, 
+  // falling back to standard client if SERVICE_ROLE_KEY is missing.
+  const adminClient = createSupabaseAdminClient();
+  const client = adminClient || supabase;
+
   const [resPrice, resPremium] = await Promise.all([
-    supabase.rpc('check_app_setting', { setting_id: 'price_password', input_value: password }),
-    supabase.rpc('check_app_setting', { setting_id: 'premium_password', input_value: password })
+    client.rpc('check_app_setting', { setting_id: 'price_password', input_value: password }),
+    client.rpc('check_app_setting', { setting_id: 'premium_password', input_value: password })
   ]);
 
   const isCorrectPremium = resPremium.data === true && !resPremium.error;

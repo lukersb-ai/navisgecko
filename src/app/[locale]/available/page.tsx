@@ -281,7 +281,7 @@ export default function AvailableGeckos() {
           
           <div className="space-y-2">
             {/* Category Filter */}
-            {!loading && categories.length > 0 && (
+            {!loading && categories.length > 1 && (
               <div className="flex flex-wrap gap-3 w-full overflow-x-auto pb-2 scrollbar-hide">
                 <button 
                   onClick={() => setActiveFilter('all')}

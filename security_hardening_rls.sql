@@ -102,3 +102,24 @@ CREATE POLICY "Public read caresheets" ON public.caresheets FOR SELECT USING (tr
 
 CREATE POLICY "Admin full site_content" ON public.site_content FOR ALL USING (auth.uid() = '079f5251-9e4a-4fc2-beba-7dfba18b78e2');
 CREATE POLICY "Public read site_content" ON public.site_content FOR SELECT USING (true);
+
+-- ========================================================
+-- 8. FIX: Public Bucket Allows Listing (Linter 0025)
+-- ========================================================
+-- Usuwamy zbyt szeroką politykę SELECT, która pozwalała każdemu 
+-- na listowanie wszystkich plików w wiaderku 'geckos'.
+-- Obrazy nadal będą działać, bo wiaderko jest oznaczone jako 'public'.
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+
+-- ========================================================
+-- 9. FIX: Secure SECURITY DEFINER Function (Linter 0028/0029)
+-- ========================================================
+-- Odbieramy uprawnienia do wykonywania funkcji check_app_setting 
+-- wszystkim (PUBLIC) oraz rolom anon/authenticated.
+-- Funkcja powinna być wywoływana tylko przez serwer (np. Service Role).
+
+REVOKE EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) FROM anon, authenticated;
+
+-- Jeśli chcesz nadal używać klucza anon (tymczasowo), odkomentuj poniższe:
+-- GRANT EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) TO anon, authenticated;
