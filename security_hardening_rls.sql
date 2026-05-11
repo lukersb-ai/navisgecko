@@ -121,5 +121,14 @@ DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 REVOKE EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) FROM anon, authenticated;
 
--- Jeśli chcesz nadal używać klucza anon (tymczasowo), odkomentuj poniższe:
--- GRANT EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) TO anon, authenticated;
+-- GRANT dla administratora (Service Role), aby mógł sprawdzać hasła
+GRANT EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.check_app_setting(TEXT, TEXT) TO postgres;
+
+-- Zaktualizowana polityka dla app_settings (dostęp dla admina UID oraz roli service_role)
+DROP POLICY IF EXISTS "Admin access settings" ON public.app_settings;
+CREATE POLICY "Admin access settings" ON public.app_settings
+  FOR ALL USING (
+    auth.uid() = '079f5251-9e4a-4fc2-beba-7dfba18b78e2' 
+    OR (auth.jwt() ->> 'role' = 'service_role')
+  );

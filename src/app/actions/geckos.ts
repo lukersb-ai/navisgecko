@@ -8,9 +8,12 @@ export async function getGeckosAction() {
   const cookieStore = await cookies();
   const isRevealed = cookieStore.get('prices_revealed')?.value === 'true';
 
+  const adminClient = createSupabaseAdminClient();
+  const client = adminClient || supabase;
+
   const [gRes, cRes] = await Promise.all([
-    supabase.from('geckos').select('id, internalId, morph, gender, weight, birthDate, price, priceEur, hidePrice, isHidden, isSecret, isPremium, imageUrl, categoryId, status, description, created_at').eq('isHidden', false).order('created_at', { ascending: false }),
-    supabase.from('categories').select('id, namePl, nameEn, isPrivate')
+    client.from('geckos').select('id, internalId, morph, gender, weight, birthDate, price, priceEur, hidePrice, isHidden, isSecret, isPremium, imageUrl, categoryId, status, description, created_at').eq('isHidden', false).order('created_at', { ascending: false }),
+    client.from('categories').select('id, namePl, nameEn, isPrivate')
   ]);
 
   const isPremiumRevealed = cookieStore.get('premium_revealed')?.value === 'true';
@@ -60,6 +63,8 @@ export async function verifyPricePassword(password: string) {
     client.rpc('check_app_setting', { setting_id: 'price_password', input_value: password }),
     client.rpc('check_app_setting', { setting_id: 'premium_password', input_value: password })
   ]);
+
+  console.log(`[Auth Debug] Password check for "${password}":`, { price: resPrice.data, premium: resPremium.data, errorPrice: resPrice.error, errorPremium: resPremium.error });
 
   const isCorrectPremium = resPremium.data === true && !resPremium.error;
   const isCorrectPrice   = resPrice.data  === true && !resPrice.error;
