@@ -1,9 +1,14 @@
 'use server';
 
-import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabase-server';
 import { revalidatePath } from 'next/cache';
 
 export async function updateBreederOrderAction(id1: string, order1: number, id2: string, order2: number) {
+  // Auth Guard
+  const supabaseServer = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) return { error: 'Brak uprawnień. Zaloguj się jako administrator.' };
+
   const adminClient = createSupabaseAdminClient();
   if (!adminClient) return { error: 'No admin client' };
 
@@ -19,6 +24,11 @@ export async function updateBreederOrderAction(id1: string, order1: number, id2:
 }
 
 export async function reorderAllBreedersAction(updates: { id: string, sort_order: number }[]) {
+  // Auth Guard
+  const supabaseServer = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) return { error: 'Brak uprawnień. Zaloguj się jako administrator.' };
+
   const adminClient = createSupabaseAdminClient();
   if (!adminClient) return { error: 'No admin client' };
 

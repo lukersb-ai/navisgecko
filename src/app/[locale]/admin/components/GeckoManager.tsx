@@ -13,6 +13,7 @@ export default function GeckoManager() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(15);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Form State
@@ -587,6 +588,7 @@ export default function GeckoManager() {
                 <tbody className="divide-y divide-earth-dark/5">
                   {geckos
                     .filter(g => filterCategory === 'all' || g.categoryId === filterCategory)
+                    .slice(0, visibleCount)
                     .map(g => (
                     <tr key={g.id} className={`hover:bg-earth-beige/20 transition-colors ${g.isHidden ? 'opacity-50 grayscale' : ''}`}>
                       {/* 1. Zdjecie */}
@@ -805,9 +807,35 @@ export default function GeckoManager() {
                       </td>
                     </tr>
                   ))}
-                  {geckos.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-500">Brak ofert w systemie, dodaj pierwszego gekona.</td></tr>}
+                  {geckos.filter(g => filterCategory === 'all' || g.categoryId === filterCategory).length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-gray-500 font-bold">
+                        Brak ofert dla tej kategorii.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-8 flex justify-center gap-4">
+              {visibleCount < geckos.filter(g => filterCategory === 'all' || g.categoryId === filterCategory).length && (
+                <button 
+                  onClick={() => setVisibleCount(prev => prev + 20)}
+                  className="px-8 py-3 bg-earth-dark text-earth-beige rounded-xl font-bold hover:bg-earth-main transition-all shadow-md flex items-center gap-2"
+                >
+                  <RefreshCcw className="w-4 h-4" />
+                  Pokaż więcej ({geckos.filter(g => filterCategory === 'all' || g.categoryId === filterCategory).length - visibleCount})
+                </button>
+              )}
+              {visibleCount > 15 && (
+                <button 
+                  onClick={() => setVisibleCount(15)}
+                  className="px-8 py-3 bg-white border border-earth-dark/10 text-earth-dark/60 rounded-xl font-bold hover:bg-earth-beige/20 transition-all shadow-sm"
+                >
+                  Pokaż mniej
+                </button>
+              )}
             </div>
           </div>
         )}

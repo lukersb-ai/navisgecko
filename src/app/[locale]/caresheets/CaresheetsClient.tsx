@@ -1,0 +1,54 @@
+'use client';
+
+import { useTranslations, useLocale } from 'next-intl';
+import { motion } from 'framer-motion';
+import { Link } from '@/i18n/routing';
+import { ChevronRight } from 'lucide-react';
+
+export default function CaresheetsClient({ caresheets }: { caresheets: any[] }) {
+  const t = useTranslations('Caresheets');
+  const locale = useLocale();
+  const isPl = locale === 'pl';
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      {caresheets.map((species, index) => (
+        <Link key={species.id} href={`/caresheets/${species.id}`} className="group">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -8 }}
+            transition={{ 
+              delay: index * 0.05, 
+              duration: 0.6, 
+              ease: [0.22, 1, 0.36, 1] 
+            }}
+            className="bg-white/40 backdrop-blur-sm rounded-[2.5rem] p-10 md:p-12 shadow-xl shadow-earth-dark/5 border border-white/60 hover:border-earth-accent/20 transition-colors duration-300 h-full flex flex-col justify-between group will-change-transform"
+          >
+            <div className="mb-8">
+              <div className="w-12 h-1.5 bg-earth-accent rounded-full mb-8"></div>
+              <h3 className="text-3xl md:text-4xl font-black text-earth-dark mb-6 leading-tight group-hover:text-earth-accent transition-colors">
+                {isPl ? species.namePl.replace(/Gekony orzęsione/i, 'Gekon orzęsiony').replace(/Gekony lamparcie/i, 'Gekon lamparci').replace(/Gekony/i, 'Gekon') : species.nameEn}
+              </h3>
+              <p className="text-earth-dark/70 text-lg md:text-xl leading-relaxed line-clamp-3 font-medium">
+                {isPl ? species.descriptionPl : species.descriptionEn}
+              </p>
+            </div>
+            
+            <div className="relative z-10 flex items-center justify-end mt-auto pt-8 border-t font-black text-xl border-earth-dark/10 group-hover:border-earth-accent/20 transition-colors">
+              <div className="flex items-center text-earth-accent">
+                <span>{t('readMore')}</span>
+                <ChevronRight className="w-7 h-7 ml-2 group-hover:translate-x-2 transition-transform" />
+              </div>
+            </div>
+          </motion.div>
+        </Link>
+      ))}
+      {caresheets.length === 0 && (
+        <div className="col-span-full text-center text-earth-dark/60 py-12 border-2 border-dashed border-earth-dark/20 rounded-xl font-medium">
+           {t('empty')}
+        </div>
+      )}
+    </div>
+  );
+}

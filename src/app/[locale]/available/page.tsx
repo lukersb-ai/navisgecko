@@ -49,6 +49,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
           src={images[currentImage]}
           alt={gecko.morph || 'Gecko'}
           fill
+          unoptimized={true}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover transition-opacity duration-300"
         />
@@ -254,19 +255,23 @@ export default function AvailableGeckos() {
 
   if (sortBy !== 'none') {
     filteredAndSortedGeckos.sort((a, b) => {
-      // Hidden prices always at the end when sorting by price
-      if (a.hidePrice && !b.hidePrice) return 1;
-      if (!a.hidePrice && b.hidePrice) return -1;
+      const pA = locale === 'pl' ? a.price : a.priceEur;
+      const pB = locale === 'pl' ? b.price : b.priceEur;
 
+      const isAHidden = a.hidePrice || pA === null || pA === undefined;
+      const isBHidden = b.hidePrice || pB === null || pB === undefined;
+
+      // 1. Ukryte/Puste zawsze na koniec
+      if (isAHidden && !isBHidden) return 1;
+      if (!isAHidden && isBHidden) return -1;
+      if (isAHidden && isBHidden) return 0;
+      
+      // 2. Normalne sortowanie dla reszty
       if (sortBy === 'price-asc') {
-        const pA = locale === 'pl' ? (a.price || 0) : (a.priceEur || 0);
-        const pB = locale === 'pl' ? (b.price || 0) : (b.priceEur || 0);
-        return pA - pB;
+        return (pA || 0) - (pB || 0);
       }
       if (sortBy === 'price-desc') {
-        const pA = locale === 'pl' ? (a.price || 0) : (a.priceEur || 0);
-        const pB = locale === 'pl' ? (b.price || 0) : (b.priceEur || 0);
-        return pB - pA;
+        return (pB || 0) - (pA || 0);
       }
       return 0;
     });
@@ -375,7 +380,7 @@ export default function AvailableGeckos() {
               <div className="mt-16 text-center">
                 <button 
                   onClick={() => setVisibleCount(prev => prev + 12)}
-                  className="px-8 py-4 bg-white border-2 border-earth-dark/10 text-earth-dark rounded-full font-bold hover:bg-earth-beige/20 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                  className="px-8 py-4 bg-earth-dark text-white rounded-full font-bold hover:bg-earth-main transition-all hover:scale-105 active:scale-95 shadow-lg"
                 >
                   Pokaż więcej ({filteredAndSortedGeckos.length - visibleCount})
                 </button>

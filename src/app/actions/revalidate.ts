@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 
 /**
@@ -22,6 +22,15 @@ export async function revalidateSiteAction(): Promise<{ success: boolean; error?
   revalidatePath('/en');
   revalidatePath('/pl/contact');
   revalidatePath('/en/contact');
+  revalidatePath('/pl/available');
+  revalidatePath('/en/available');
+  revalidatePath('/pl/caresheets');
+  revalidatePath('/en/caresheets');
+
+  // Wyczyść Cache Danych dla poszczególnych zasobów
+  revalidateTag('geckos');
+  revalidateTag('breeders');
+  revalidateTag('categories');
 
   return { success: true };
 }
