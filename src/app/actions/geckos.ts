@@ -3,8 +3,10 @@
 import { supabase } from '@/lib/supabase';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
+import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 
 export async function getGeckosAction() {
+  noStore();
   const cookieStore = await cookies();
   const isRevealed = cookieStore.get('prices_revealed')?.value === 'true';
 
@@ -12,7 +14,7 @@ export async function getGeckosAction() {
   const client = adminClient || supabase;
 
   const [gRes, cRes] = await Promise.all([
-    client.from('geckos').select('id, internalId, morph, gender, weight, birthDate, price, priceEur, hidePrice, isHidden, isSecret, isPremium, imageUrl, categoryId, status, description, created_at').eq('isHidden', false).order('created_at', { ascending: false }),
+    client.from('geckos').select('id, internalId, morph, gender, weight, birthDate, price, priceEur, hidePrice, isHidden, isSecret, isPremium, imageUrl, categoryId, status, description, created_at, sort_order').eq('isHidden', false).order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
     client.from('categories').select('id, namePl, nameEn, isPrivate')
   ]);
 
@@ -93,4 +95,39 @@ export async function lockPrices() {
   cookieStore.delete('prices_revealed');
   cookieStore.delete('premium_revealed');
   return true;
+}
+
+export async function updateGeckoOrderAction(id1: string, order1: number, id2: string, order2: number) {
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) return { error: 'No admin client' };
+
+  const { error } = await adminClient.from('geckos').update({ sort_order: order1 }).eq('id', id1);
+  const { error: error2 } = await adminClient.from('geckos').update({ sort_order: order2 }).eq('id', id2);
+
+  if (!error && !error2) {
+    revalidatePath('/', 'layout'); 
+    revalidatePath('/[locale]/available', 'page');
+    return { success: true };
+  }
+
+  return { error: error || error2 };
+}
+
+export async function reorderAllGeckosAction(updates: { id: string, sort_order: number }[]) {
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) return { error: 'No admin client' };
+
+  // Wykonujemy aktualizacje w pętli (Supabase nie ma bulk update dla różnych wartości w jednym zapytaniu bez RPC)
+  // Ale możemy użyć Promise.all
+  try {
+    await Promise.all(
+      updates.map(u => 
+        adminClient.from('geckos').update({ sort_order: u.sort_order }).eq('id', u.id)
+      )
+    );
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
 }

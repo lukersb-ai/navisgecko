@@ -17,7 +17,7 @@ export default async function Home({ params }: { params: { locale: string } }) {
   const { data: heroData } = await supabase.from('site_content').select('content_pl, content_en').eq('id', 'hero_desc').single();
   
   // Fetch Breeders and Categories (Specific columns only)
-  const { data: breeders } = await supabase.from('breeders').select('id, name, imageUrl, categoryId').order('created_at', { ascending: false });
+  const { data: breeders } = await supabase.from('breeders').select('id, name, imageUrl, categoryId, sort_order').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
   const { data: categories } = await supabase.from('categories').select('id, namePl, nameEn, isPrivate').eq('isPrivate', false);
   
   // Filter categories to only those that have breeders

@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { LoaderCircle, Trash2, Plus, Edit, Image as ImageIcon } from 'lucide-react';
+import { LoaderCircle, Trash2, Plus, Edit, Image as ImageIcon, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react';
+import { updateBreederOrderAction, reorderAllBreedersAction } from '@/app/actions/breeders';
+import { compressImage } from '@/lib/image-utils';
 
 export default function BreedersManager() {
   const [breeders, setBreeders] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,7 +32,7 @@ export default function BreedersManager() {
   const fetchData = async () => {
     setLoading(true);
     const [breedersRes, catsRes] = await Promise.all([
-      supabase.from('breeders').select('*').order('created_at', { ascending: false }),
+      supabase.from('breeders').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
       supabase.from('categories').select('*')
     ]);
     if (breedersRes.data) setBreeders(breedersRes.data);
@@ -40,71 +43,21 @@ export default function BreedersManager() {
     setLoading(false);
   };
 
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new window.Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1920; 
-          const MAX_HEIGHT = 1920;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-            if (width > height) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            } else {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, width, height);
-          }
-          
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              resolve(file);
-            }
-          }, 'image/jpeg', 0.9); 
-        };
-        img.onerror = () => resolve(file);
-      };
-      reader.onerror = () => resolve(file);
-    });
-  };
-
   const uploadImage = async () => {
     if (!file) return imageUrl;
     setUploading(true);
     
     try {
-      const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
+      const processedFile = await compressImage(file);
       const fileExt = processedFile.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      
       const { error: uploadError } = await supabase.storage.from('geckos').upload(fileName, processedFile);
       
       if (uploadError) {
-        alert('Błąd wgrywania: ' + uploadError.message);
+        console.error('Błąd uploadu:', uploadError);
         setUploading(false);
-        return '';
+        return imageUrl;
       }
       
       const { data } = supabase.storage.from('geckos').getPublicUrl(fileName);
@@ -157,6 +110,58 @@ export default function BreedersManager() {
     }
   };
 
+  const moveBreeder = async (id: string, direction: 'up' | 'down') => {
+    const index = breeders.findIndex(b => b.id === id);
+    if (index === -1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= breeders.length) return;
+
+    const current = breeders[index];
+    const target = breeders[targetIndex];
+
+    let currentSort = current.sort_order || 0;
+    let targetSort = target.sort_order || 0;
+
+    if (currentSort === targetSort) {
+      if (direction === 'up') currentSort = targetSort - 1;
+      else currentSort = targetSort + 1;
+    } else {
+      const temp = currentSort;
+      currentSort = targetSort;
+      targetSort = temp;
+    }
+
+    // Optymistyczna aktualizacja UI
+    setBreeders(prev => {
+      const newList = [...prev];
+      const idxA = newList.findIndex(b => b.id === current.id);
+      const idxB = newList.findIndex(b => b.id === target.id);
+      if (idxA !== -1 && idxB !== -1) {
+        const tempObj = { ...newList[idxA], sort_order: currentSort };
+        newList[idxA] = { ...newList[idxB], sort_order: targetSort };
+        newList[idxB] = tempObj;
+      }
+      return newList;
+    });
+
+    const res = await updateBreederOrderAction(current.id, currentSort, target.id, targetSort);
+    if (res.error) {
+      alert('Błąd podczas zmiany kolejności');
+      fetchData();
+    }
+  };
+
+  const handleResetAndAlignOrder = async () => {
+    if (!confirm('Czy na pewno chcesz zresetować i wyrównać kolejność wszystkich zdjęć w galerii?')) return;
+    setLoading(true);
+    const updates = breeders.map((b, i) => ({ id: b.id, sort_order: i + 1 }));
+    const res = await reorderAllBreedersAction(updates);
+    if (res.error) alert('Błąd: ' + res.error);
+    await fetchData();
+    setLoading(false);
+  };
+
   const editBreeder = (b: any) => {
     setIsAdding(true);
     setEditingId(b.id);
@@ -167,6 +172,14 @@ export default function BreedersManager() {
     setDescription(b.description || '');
     setImageUrl(b.imageUrl || '');
     setFile(null);
+    
+    setTimeout(() => {
+      if (containerRef.current) {
+        const yOffset = -100; 
+        const y = containerRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   const deleteBreeder = async (id: string, storedUrl: string) => {
@@ -194,7 +207,7 @@ export default function BreedersManager() {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-earth-dark/5 overflow-hidden">
+    <div ref={containerRef} className="bg-white rounded-2xl shadow-lg border border-earth-dark/5 overflow-hidden">
       <div className="p-6 md:p-8 border-b border-earth-dark/10 bg-earth-beige/20 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white rounded-xl shadow-sm">
@@ -205,12 +218,21 @@ export default function BreedersManager() {
             <p className="text-earth-dark/60 text-sm">Zarządzaj gekonami pokazowymi, niesprzedawalnymi.</p>
           </div>
         </div>
-        <button 
-          onClick={() => { resetForm(); setIsAdding(!isAdding); }} 
-          className="flex items-center gap-2 bg-earth-dark text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-earth-main"
-        >
-          {isAdding ? 'Anuluj' : <><Plus className="w-4 h-4"/> Dodaj Zwierzaka</>}
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={handleResetAndAlignOrder}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-earth-dark/10 rounded-xl text-xs font-bold text-earth-dark/60 hover:text-earth-dark hover:border-earth-dark/30 transition-all shadow-sm"
+          >
+            <RefreshCcw className="w-3.5 h-3.5" />
+            Wyrównaj kolejność
+          </button>
+          <button 
+            onClick={() => { resetForm(); setIsAdding(!isAdding); }} 
+            className="flex items-center gap-2 bg-earth-dark text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-earth-main"
+          >
+            {isAdding ? 'Anuluj' : <><Plus className="w-4 h-4"/> Dodaj Zwierzaka</>}
+          </button>
+        </div>
       </div>
 
       <div className="p-6 md:p-8">
@@ -248,19 +270,56 @@ export default function BreedersManager() {
               <table className="w-full text-left bg-white border border-earth-dark/10 rounded-xl overflow-hidden">
                 <thead className="bg-earth-beige/50 text-earth-dark text-sm uppercase">
                   <tr>
-                    <th className="p-4">Zdjęcie</th>
+                    <th className="p-4 w-32">Zdjęcie</th>
+                    <th className="p-4 w-20 text-center">Kol.</th>
                     <th className="p-4">Gatunek</th>
-                    <th className="p-4">Akcje</th>
+                    <th className="p-4 text-right">Akcje</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-earth-dark/5">
                   {breeders.map(b => (
                     <tr key={b.id} className="hover:bg-earth-beige/20 transition-colors">
-                      <td className="p-4 w-24">
-                        {b.imageUrl ? <img src={b.imageUrl} alt="" className="w-16 h-16 object-cover rounded-lg" /> : <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>}
+                      <td className="p-4 w-40">
+                        {b.imageUrl ? <img src={b.imageUrl} alt="" className="w-32 h-32 object-cover rounded-lg shadow-md border border-earth-dark/10" /> : <div className="w-32 h-32 bg-gray-200 rounded-lg"></div>}
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <button 
+                            type="button"
+                            onClick={() => moveBreeder(b.id, 'up')}
+                            className="p-1 hover:bg-earth-beige rounded transition-colors text-earth-dark/40 hover:text-earth-accent"
+                          >
+                            <ArrowUp className="w-5 h-5" />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => moveBreeder(b.id, 'down')}
+                            className="p-1 hover:bg-earth-beige rounded transition-colors text-earth-dark/40 hover:text-earth-accent"
+                          >
+                            <ArrowDown className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                       <td className="p-4 font-bold text-earth-dark">
                          <div className="text-sm">{categories.find(c => c.id === b.categoryId)?.namePl || b.categoryId}</div>
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <button 
+                            type="button"
+                            onClick={() => moveBreeder(b.id, 'up')}
+                            className="p-1 hover:bg-earth-beige rounded transition-colors text-earth-dark/40 hover:text-earth-accent"
+                          >
+                            <ArrowUp className="w-5 h-5" />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => moveBreeder(b.id, 'down')}
+                            className="p-1 hover:bg-earth-beige rounded transition-colors text-earth-dark/40 hover:text-earth-accent"
+                          >
+                            <ArrowDown className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">

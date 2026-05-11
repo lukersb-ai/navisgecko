@@ -216,6 +216,9 @@ export default function AvailableGeckos() {
       setGeckosDB(data.geckos);
       setCategories(data.categories);
       setLoading(false);
+      
+      // Powrót na początek strony
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setPasswordError(t('passwordError'));
     }
@@ -247,12 +250,13 @@ export default function AvailableGeckos() {
       const matchesCategory = activeFilter === 'all' || g.categoryId === activeFilter;
       const matchesGender = activeGender === 'all' || g.gender?.toLowerCase() === activeGender;
       return matchesCategory && matchesGender;
-    })
-    .sort((a, b) => {
-      // Hidden prices always at the end
+    });
+
+  if (sortBy !== 'none') {
+    filteredAndSortedGeckos.sort((a, b) => {
+      // Hidden prices always at the end when sorting by price
       if (a.hidePrice && !b.hidePrice) return 1;
       if (!a.hidePrice && b.hidePrice) return -1;
-      if (a.hidePrice && b.hidePrice) return 0;
 
       if (sortBy === 'price-asc') {
         const pA = locale === 'pl' ? (a.price || 0) : (a.priceEur || 0);
@@ -266,6 +270,7 @@ export default function AvailableGeckos() {
       }
       return 0;
     });
+  }
 
   return (
     <div className="min-h-screen bg-background py-16">
@@ -281,19 +286,21 @@ export default function AvailableGeckos() {
           
           <div className="space-y-2">
             {/* Category Filter */}
-            {!loading && categories.length > 1 && (
+            {!loading && categories.length >= 1 && (
               <div className="flex flex-wrap gap-3 w-full overflow-x-auto pb-2 scrollbar-hide">
-                <button 
-                  onClick={() => setActiveFilter('all')}
-                  className={`px-6 py-2.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap ${activeFilter === 'all' ? 'bg-earth-dark text-earth-beige' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
-                >
-                  {locale === 'pl' ? 'Wszystkie gatunki' : 'All species'}
-                </button>
+                {categories.length >= 2 && (
+                  <button 
+                    onClick={() => setActiveFilter('all')}
+                    className={`px-6 py-2.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap ${activeFilter === 'all' ? 'bg-earth-dark text-earth-beige' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
+                  >
+                    {locale === 'pl' ? 'Wszystkie gatunki' : 'All species'}
+                  </button>
+                )}
                 {categories.map(c => (
                   <button 
                     key={c.id}
                     onClick={() => setActiveFilter(c.id)}
-                    className={`px-6 py-2.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap ${activeFilter === c.id ? 'bg-earth-dark text-earth-beige' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
+                    className={`px-6 py-2.5 rounded-full font-bold transition-all shadow-md whitespace-nowrap ${activeFilter === c.id || (categories.length === 1 && activeFilter === 'all') ? 'bg-earth-dark text-earth-beige' : 'bg-white text-earth-dark hover:bg-earth-beige'}`}
                   >
                     {locale === 'pl' ? c.namePl : c.nameEn}
                   </button>
@@ -302,7 +309,7 @@ export default function AvailableGeckos() {
             )}
 
             {/* Gender Filter & Sorting Row */}
-            {!loading && activeFilter !== 'all' && (
+            {!loading && (
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap gap-3 overflow-x-auto pb-2 scrollbar-hide ml-8">
                   <button 
@@ -313,15 +320,15 @@ export default function AvailableGeckos() {
                   </button>
                   <button 
                     onClick={() => setActiveGender('male')}
-                    className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'male' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-blue-50'}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'male' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-blue-50'}`}
                   >
-                    ♂ {tGeckos('genderMale')}
+                    <span>♂</span> {tGeckos('genderMale')}
                   </button>
                   <button 
                     onClick={() => setActiveGender('female')}
-                    className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'female' ? 'bg-pink-100 text-pink-800 border-pink-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-pink-50'}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all text-sm shadow-sm border whitespace-nowrap ${activeGender === 'female' ? 'bg-pink-100 text-pink-800 border-pink-200' : 'bg-white text-earth-dark border-earth-dark/10 hover:bg-pink-50'}`}
                   >
-                    ♀ {tGeckos('genderFemale')}
+                    <span>♀</span> {tGeckos('genderFemale')}
                   </button>
                   <button 
                     onClick={() => setActiveGender('unknown')}

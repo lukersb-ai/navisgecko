@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck, Wand2 } from 'lucide-react';
+import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck, Wand2, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react';
+import { updateGeckoOrderAction, reorderAllGeckosAction } from '@/app/actions/geckos';
+import { compressImage } from '@/lib/image-utils';
 
 export default function GeckoManager() {
   const [geckos, setGeckos] = useState<any[]>([]);
@@ -11,6 +13,7 @@ export default function GeckoManager() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Form State
   const [internalId, setInternalId] = useState('');
@@ -76,10 +79,54 @@ export default function GeckoManager() {
     }
   };
 
+  const moveGecko = async (id: string, direction: 'up' | 'down') => {
+    const visibleGeckos = geckos.filter(g => filterCategory === 'all' || g.categoryId === filterCategory);
+    const index = visibleGeckos.findIndex(g => g.id === id);
+    if (index === -1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= visibleGeckos.length) return;
+
+    const current = visibleGeckos[index];
+    const target = visibleGeckos[targetIndex];
+
+    let currentSort = current.sort_order || 0;
+    let targetSort = target.sort_order || 0;
+
+    if (currentSort === targetSort) {
+      if (direction === 'up') currentSort = targetSort - 1;
+      else currentSort = targetSort + 1;
+    } else {
+      const temp = currentSort;
+      currentSort = targetSort;
+      targetSort = temp;
+    }
+
+    // Optymistyczna aktualizacja UI (natychmiastowa reakcja)
+    setGeckos(prev => {
+      const newList = [...prev];
+      const idxA = newList.findIndex(g => g.id === current.id);
+      const idxB = newList.findIndex(g => g.id === target.id);
+      if (idxA !== -1 && idxB !== -1) {
+        const tempObj = { ...newList[idxA], sort_order: currentSort };
+        newList[idxA] = { ...newList[idxB], sort_order: targetSort };
+        newList[idxB] = tempObj;
+      }
+      return newList;
+    });
+
+    const res = await updateGeckoOrderAction(current.id, currentSort, target.id, targetSort);
+
+    if (res.error) {
+      alert('Nie udało się zapisać kolejności w bazie.');
+      fetchData(); // Cofnij zmiany w UI
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     const [geckosRes, catsRes, settingsRes] = await Promise.all([
-      supabase.from('geckos').select('*').order('created_at', { ascending: false }),
+      supabase.from('geckos').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
       supabase.from('categories').select('*'),
       supabase.from('app_settings').select('*').eq('id', 'eur_rate').single()
     ]);
@@ -94,78 +141,41 @@ export default function GeckoManager() {
     setLoading(false);
   };
 
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new window.Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1920; 
-          const MAX_HEIGHT = 1920;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-            if (width > height) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            } else {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, width, height);
-          }
-          
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              resolve(file); // Fallback to original if blob failed
-            }
-          }, 'image/jpeg', 0.9); 
-        };
-        img.onerror = () => resolve(file);
-      };
-      reader.onerror = () => resolve(file);
-    });
+  const handleResetAndAlignOrder = async () => {
+    if (!confirm('Czy na pewno chcesz zresetować i wyrównać kolejność wszystkich ogłoszeń? Zostaną im nadane numery 1, 2, 3... według obecnego widoku.')) return;
+    
+    setLoading(true);
+    const updates = geckos.map((g, i) => ({ id: g.id, sort_order: i + 1 }));
+    
+    const res = await reorderAllGeckosAction(updates);
+    if (res.error) {
+      alert('Błąd podczas wyrównywania kolejności: ' + res.error);
+    }
+    await fetchData();
+    setLoading(false);
   };
 
-  const uploadImages = async () => {
-    if (files.length === 0) return [];
+  const uploadImages = async (): Promise<string[]> => {
+    if (files.length === 0) return imageUrls;
     setUploading(true);
-    const urls: string[] = [];
     
-    for (const file of files) {
+    const uploadedUrls = [];
+    for (const f of files) {
       try {
-        const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
+        const processedFile = await compressImage(f);
         const fileExt = processedFile.name.split('.').pop();
         const fileName = `${crypto.randomUUID()}.${fileExt}`;
         const { error } = await supabase.storage.from('geckos').upload(fileName, processedFile);
         if (!error) {
           const { data } = supabase.storage.from('geckos').getPublicUrl(fileName);
-          urls.push(data.publicUrl);
+          uploadedUrls.push(data.publicUrl);
         }
       } catch (err) {
-        console.error('Błąd kompresji/uploadu:', err);
+        console.error('Błąd uploadu:', err);
       }
     }
     setUploading(false);
-    return urls;
+    return [...imageUrls, ...uploadedUrls];
   };
 
   const handleCreateOrUpdate = async (e: React.FormEvent) => {
@@ -229,6 +239,14 @@ export default function GeckoManager() {
     setDescriptionEn(g.description_en || '');
     setImageUrls(g.imageUrls?.length > 0 ? g.imageUrls : (g.imageUrl ? [g.imageUrl] : []));
     setFiles([]);
+    
+    setTimeout(() => {
+      if (containerRef.current) {
+        const yOffset = -100; 
+        const y = containerRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   const resetForm = () => {
@@ -301,15 +319,23 @@ export default function GeckoManager() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-earth-dark/5 overflow-hidden">
+    <div ref={containerRef} className="bg-white rounded-2xl shadow-lg border border-earth-dark/5 overflow-hidden">
       <div className="p-2 md:p-3 border-b border-earth-dark/10 bg-earth-beige/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-earth-dark">Menedżer Ofert</h2>
         </div>
         
         <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-          {/* Szybki Filtr */}
-          <div className="flex items-center gap-2 bg-white/60 p-1.5 pl-3 rounded-xl border border-earth-dark/10 shadow-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+          <button 
+            onClick={handleResetAndAlignOrder}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-earth-dark/10 rounded-xl text-xs font-bold text-earth-dark/60 hover:text-earth-dark hover:border-earth-dark/30 transition-all shadow-sm"
+            title="Wyrównaj numery kolejności (1, 2, 3...)"
+          >
+            <RefreshCcw className="w-3.5 h-3.5" />
+            Wyrównaj kolejność
+          </button>
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-earth-dark/10 shadow-sm">
             <span className="text-[10px] font-black text-earth-dark/40 uppercase tracking-wider">Filtruj:</span>
             <select 
               value={filterCategory} 
@@ -319,6 +345,7 @@ export default function GeckoManager() {
               <option value="all">Wszystkie gatunki</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
             </select>
+          </div>
           </div>
 
           <button
@@ -548,6 +575,7 @@ export default function GeckoManager() {
                 <thead className="bg-earth-beige/50 text-earth-dark text-sm uppercase">
                   <tr>
                     <th className="p-4 w-40 text-center">Zdj.</th>
+                    <th className="p-4 w-20 text-center">Kolejność</th>
                     <th className="p-4 w-24">ID</th>
                     <th className="p-4">Morph & Gatunek</th>
                     <th className="p-4 w-32 text-center">Płeć / Waga</th>
@@ -559,11 +587,6 @@ export default function GeckoManager() {
                 <tbody className="divide-y divide-earth-dark/5">
                   {geckos
                     .filter(g => filterCategory === 'all' || g.categoryId === filterCategory)
-                    .sort((a, b) => {
-                      const catA = categories.find(c => c.id === a.categoryId)?.namePl || '';
-                      const catB = categories.find(c => c.id === b.categoryId)?.namePl || '';
-                      return catA.localeCompare(catB);
-                    })
                     .map(g => (
                     <tr key={g.id} className={`hover:bg-earth-beige/20 transition-colors ${g.isHidden ? 'opacity-50 grayscale' : ''}`}>
                       {/* 1. Zdjecie */}
@@ -572,6 +595,28 @@ export default function GeckoManager() {
                           {(g.imageUrls && g.imageUrls.length > 0) || g.imageUrl ? (
                              <img src={g.imageUrls?.[0] || g.imageUrl} alt="" className="w-32 h-32 object-cover rounded-2xl shadow-md border border-earth-dark/10" />
                           ) : <div className="w-32 h-32 bg-gray-100 rounded-2xl shadow-inner flex items-center justify-center text-gray-400 text-xs">Brak</div>}
+                        </div>
+                      </td>
+
+                      {/* 1.5 Kolejność (Strzałki) */}
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <button 
+                            type="button"
+                            onClick={() => moveGecko(g.id, 'up')}
+                            className="p-1 hover:bg-earth-beige rounded transition-colors text-earth-dark/40 hover:text-earth-accent"
+                            title="Przesuń w górę"
+                          >
+                            <ArrowUp className="w-5 h-5" />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => moveGecko(g.id, 'down')}
+                            className="p-1 hover:bg-earth-beige rounded transition-colors text-earth-dark/40 hover:text-earth-accent"
+                            title="Przesuń w dół"
+                          >
+                            <ArrowDown className="w-5 h-5" />
+                          </button>
                         </div>
                       </td>
 

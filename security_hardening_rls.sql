@@ -132,3 +132,16 @@ CREATE POLICY "Admin access settings" ON public.app_settings
     auth.uid() = '079f5251-9e4a-4fc2-beba-7dfba18b78e2' 
     OR (auth.jwt() ->> 'role' = 'service_role')
   );
+
+-- ========================================================
+-- 10. PERFORMANCE: Database Indexes for Sorting & Filtering
+-- ========================================================
+-- Optymalizacja pod darmowy plan Supabase (przyspiesza ORDER BY i WHERE).
+
+-- Indeksy dla tabeli gekonów
+CREATE INDEX IF NOT EXISTS idx_geckos_sort_order ON public.geckos(sort_order);
+CREATE INDEX IF NOT EXISTS idx_geckos_category_id ON public.geckos("categoryId");
+
+-- Indeksy dla tabeli hodowlanej
+CREATE INDEX IF NOT EXISTS idx_breeders_sort_order ON public.breeders(sort_order);
+CREATE INDEX IF NOT EXISTS idx_breeders_category_id ON public.breeders("categoryId");
