@@ -40,26 +40,96 @@ export default function BreedersManager() {
     setLoading(false);
   };
 
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1920; 
+          const MAX_HEIGHT = 1920;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            if (width > height) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            } else {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+          }
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          }, 'image/jpeg', 0.9); 
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
   const uploadImage = async () => {
     if (!file) return imageUrl;
     setUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from('geckos').upload(fileName, file);
-    if (uploadError) {
-      alert('Błąd wgrywania: ' + uploadError.message);
+    
+    try {
+      const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
+      const fileExt = processedFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('geckos').upload(fileName, processedFile);
+      
+      if (uploadError) {
+        alert('Błąd wgrywania: ' + uploadError.message);
+        setUploading(false);
+        return '';
+      }
+      
+      const { data } = supabase.storage.from('geckos').getPublicUrl(fileName);
       setUploading(false);
-      return '';
+      return data.publicUrl;
+    } catch (err) {
+      console.error('Błąd uploadu:', err);
+      setUploading(false);
+      return imageUrl;
     }
-    const { data } = supabase.storage.from('geckos').getPublicUrl(fileName);
-    setUploading(false);
-    return data.publicUrl;
   };
 
   const handleCreateOrUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const uploadedUrl = await uploadImage();
-    const finalImageUrl = uploadedUrl || imageUrl;
+    
+    // If we have a new file, upload it and delete the old one
+    let finalImageUrl = imageUrl;
+    if (file) {
+       // Delete old image if it exists
+       if (imageUrl) {
+         const oldPath = imageUrl.split('/').pop();
+         if (oldPath) await supabase.storage.from('geckos').remove([oldPath]);
+       }
+       finalImageUrl = await uploadImage();
+    }
 
     const payload = {
       name,
@@ -99,8 +169,15 @@ export default function BreedersManager() {
     setFile(null);
   };
 
-  const deleteBreeder = async (id: string) => {
+  const deleteBreeder = async (id: string, storedUrl: string) => {
     if (!confirm('Na pewno usunąć tego zwierzaka hodowlanego?')) return;
+    
+    // Delete image from storage
+    if (storedUrl) {
+      const filePath = storedUrl.split('/').pop();
+      if (filePath) await supabase.storage.from('geckos').remove([filePath]);
+    }
+
     const { error } = await supabase.from('breeders').delete().eq('id', id);
     if (!error) fetchData();
   };
@@ -188,7 +265,7 @@ export default function BreedersManager() {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                            <button onClick={() => editBreeder(b)} className="p-2 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><Edit className="w-4 h-4"/></button>
-                           <button onClick={() => deleteBreeder(b.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"><Trash2 className="w-4 h-4"/></button>
+                           <button onClick={() => deleteBreeder(b.id, b.imageUrl)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"><Trash2 className="w-4 h-4"/></button>
                         </div>
                       </td>
                     </tr>

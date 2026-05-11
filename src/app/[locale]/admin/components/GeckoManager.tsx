@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react';
+import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck, Wand2 } from 'lucide-react';
 
 export default function GeckoManager() {
   const [geckos, setGeckos] = useState<any[]>([]);
@@ -10,6 +10,7 @@ export default function GeckoManager() {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Form State
   const [internalId, setInternalId] = useState('');
@@ -31,9 +32,22 @@ export default function GeckoManager() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isQuickEdit, setIsQuickEdit] = useState(false);
+  const [eurRate, setEurRate] = useState(4.30);
+
+  const uniqueMorphs = Array.from(new Set(geckos.map(g => g.morph).filter(Boolean))).sort();
 
   useEffect(() => {
+    setMounted(true);
     fetchData();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        fetchData();
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -64,16 +78,71 @@ export default function GeckoManager() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [geckosRes, catsRes] = await Promise.all([
+    const [geckosRes, catsRes, settingsRes] = await Promise.all([
       supabase.from('geckos').select('*').order('created_at', { ascending: false }),
-      supabase.from('categories').select('*')
+      supabase.from('categories').select('*'),
+      supabase.from('app_settings').select('*').eq('id', 'eur_rate').single()
     ]);
     if (geckosRes.data) setGeckos(geckosRes.data);
     if (catsRes.data) {
       setCategories(catsRes.data);
       if (catsRes.data.length > 0 && !editingId) setCategoryId(catsRes.data[0].id);
     }
+    if (settingsRes.data) {
+      setEurRate(parseFloat(settingsRes.data.value) || 4.30);
+    }
     setLoading(false);
+  };
+
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1920; 
+          const MAX_HEIGHT = 1920;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            if (width > height) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            } else {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+          }
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file); // Fallback to original if blob failed
+            }
+          }, 'image/jpeg', 0.9); 
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
   };
 
   const uploadImages = async () => {
@@ -82,12 +151,17 @@ export default function GeckoManager() {
     const urls: string[] = [];
     
     for (const file of files) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const { error } = await supabase.storage.from('geckos').upload(fileName, file);
-      if (!error) {
-        const { data } = supabase.storage.from('geckos').getPublicUrl(fileName);
-        urls.push(data.publicUrl);
+      try {
+        const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
+        const fileExt = processedFile.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const { error } = await supabase.storage.from('geckos').upload(fileName, processedFile);
+        if (!error) {
+          const { data } = supabase.storage.from('geckos').getPublicUrl(fileName);
+          urls.push(data.publicUrl);
+        }
+      } catch (err) {
+        console.error('Błąd kompresji/uploadu:', err);
       }
     }
     setUploading(false);
@@ -176,6 +250,14 @@ export default function GeckoManager() {
     if (categories.length > 0) setCategoryId(categories[0].id);
   };
 
+  const handleQuickUpdate = async (id: string, payload: any) => {
+    const { error } = await supabase.from('geckos').update(payload).eq('id', id);
+    if (!error) {
+      setGeckos(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
+    }
+    return { error };
+  };
+
   const deleteGecko = async (id: string, storedUrls: string[]) => {
     if (!confirm('Na pewno chcesz usunąć tę ofertę?')) return;
     
@@ -190,10 +272,26 @@ export default function GeckoManager() {
     fetchData();
   };
   
-  const removeOldImage = (index: number) => {
+  const removeOldImage = async (index: number) => {
+    const url = imageUrls[index];
+    if (url) {
+       const filePath = url.split('/').pop();
+       if (filePath) await supabase.storage.from('geckos').remove([filePath]);
+    }
     const newUrls = [...imageUrls];
     newUrls.splice(index, 1);
     setImageUrls(newUrls);
+    
+    // If editing existing gecko, sync DB immediately to avoid broken links
+    if (editingId) {
+      await supabase.from('geckos').update({ 
+        imageUrls: newUrls, 
+        imageUrl: newUrls[0] || null 
+      }).eq('id', editingId);
+      
+      // Update local state as well
+      setGeckos(prev => prev.map(g => g.id === editingId ? { ...g, imageUrls: newUrls, imageUrl: newUrls[0] || null } : g));
+    }
   }
 
   const removeNewFile = (index: number) => {
@@ -222,6 +320,19 @@ export default function GeckoManager() {
               {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
             </select>
           </div>
+
+          <button
+            onClick={() => {
+              if (isQuickEdit) {
+                fetchData(); // Refresh only when closing edit mode
+              }
+              setIsQuickEdit(!isQuickEdit);
+            }}
+            className={`flex items-center gap-2 px-4 py-3.5 rounded-xl font-black transition-all text-sm shadow-md ${isQuickEdit ? 'bg-orange-100 text-orange-600' : 'bg-white text-earth-dark border border-earth-dark/10'}`}
+          >
+            <Edit className="w-4 h-4" />
+            {isQuickEdit ? 'Zakończ Edycję' : 'Szybka Edycja'}
+          </button>
 
           <button
             onClick={() => { resetForm(); setIsAdding(!isAdding); }}
@@ -268,7 +379,7 @@ export default function GeckoManager() {
                       </div>
                       <div className="space-y-1">
                         <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Morph (Odmiana)</label>
-                        <input value={morph} onChange={e=>setMorph(e.target.value)} className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm" />
+                        <input list="morph-suggestions" value={morph} onChange={e=>setMorph(e.target.value)} className="w-full border-2 border-earth-dark/5 p-2.5 rounded-xl bg-white focus:border-earth-accent focus:outline-none transition-colors shadow-sm text-sm" />
                       </div>
                       <div className="space-y-1">
                         <label className="block text-[10px] font-black text-earth-dark uppercase tracking-wider">Płeć</label>
@@ -291,16 +402,49 @@ export default function GeckoManager() {
                     </div>
 
                     <div className="bg-white p-4 rounded-2xl border-2 border-earth-dark/5 shadow-sm space-y-4">
-                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-1">
-                           <label className="block text-[10px] font-black text-earth-dark/50 uppercase">Cena (PLN)</label>
-                           <input type="number" value={price} onChange={e=>setPrice(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-1.5 focus:border-earth-accent focus:outline-none transition-colors bg-transparent text-sm" />
-                         </div>
-                         <div className="space-y-1">
-                           <label className="block text-[10px] font-black text-earth-dark/50 uppercase">Cena (EUR)</label>
-                           <input type="number" value={priceEur} onChange={e=>setPriceEur(e.target.value)} className="w-full border-b-2 border-earth-dark/10 p-1.5 focus:border-earth-accent focus:outline-none transition-colors bg-transparent text-sm" />
-                         </div>
-                       </div>
+              <div className="flex items-end gap-2">
+                <div className="flex-grow">
+                  <label className="block text-sm font-bold text-earth-dark mb-2">Cena (PLN)</label>
+                  <input 
+                    type="number" 
+                    value={price} 
+                    onChange={e => {
+                      setPrice(e.target.value);
+                      if (e.target.value && !priceEur) {
+                        const raw = parseFloat(e.target.value) / eurRate;
+                        const rounded = Math.ceil(raw / 5) * 5;
+                        setPriceEur(rounded.toString());
+                      }
+                    }}
+                    className="w-full border-2 border-earth-dark/10 p-4 rounded-2xl bg-white focus:border-earth-accent focus:outline-none transition-all font-bold text-lg"
+                    placeholder="np. 1200"
+                  />
+                </div>
+                <div className="flex-grow relative">
+                  <label className="block text-sm font-bold text-earth-dark mb-2">Cena (EUR)</label>
+                  <input 
+                    type="number" 
+                    value={priceEur} 
+                    onChange={e => setPriceEur(e.target.value)}
+                    className="w-full border-2 border-earth-dark/10 p-4 rounded-2xl bg-white focus:border-earth-accent focus:outline-none transition-all font-bold text-lg pr-12"
+                    placeholder="np. 280"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (price) {
+                        const raw = parseFloat(price) / eurRate;
+                        const rounded = Math.ceil(raw / 5) * 5;
+                        setPriceEur(rounded.toString());
+                      }
+                    }}
+                    className="absolute right-3 bottom-3 p-2 bg-earth-accent hover:bg-orange-600 text-white rounded-lg shadow-md transition-all active:scale-95"
+                    title="Przelicz z PLN"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
                        
                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-1">
                          <label className="flex items-center gap-2 text-xs font-bold text-earth-dark cursor-pointer group">
@@ -403,12 +547,13 @@ export default function GeckoManager() {
               <table className="w-full text-left bg-white border border-earth-dark/10 rounded-xl overflow-hidden">
                 <thead className="bg-earth-beige/50 text-earth-dark text-sm uppercase">
                   <tr>
-                    <th className="p-4">Zdjęcie</th>
-                    <th className="p-4">ID & Cena</th>
+                    <th className="p-4 w-40 text-center">Zdj.</th>
+                    <th className="p-4 w-24">ID</th>
                     <th className="p-4">Morph & Gatunek</th>
-                    <th className="p-4">Płeć/Waga</th>
-                    <th className="p-4">Zmień Status</th>
-                    <th className="p-4">Akcje</th>
+                    <th className="p-4 w-32 text-center">Płeć / Waga</th>
+                    <th className="p-4 w-40 text-center">Status</th>
+                    <th className="p-4 w-44">Cena</th>
+                    <th className="p-4 w-36 text-right">Akcje</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-earth-dark/5">
@@ -421,57 +566,196 @@ export default function GeckoManager() {
                     })
                     .map(g => (
                     <tr key={g.id} className={`hover:bg-earth-beige/20 transition-colors ${g.isHidden ? 'opacity-50 grayscale' : ''}`}>
-                      <td className="p-4 w-24">
-                        {(g.imageUrls && g.imageUrls.length > 0) || g.imageUrl ? (
-                           <img src={g.imageUrls?.[0] || g.imageUrl} alt="" className="w-16 h-16 object-cover rounded-lg shadow-sm" />
-                        ) : <div className="w-16 h-16 bg-gray-200 rounded-lg shadow-sm"></div>}
-                      </td>
+                      {/* 1. Zdjecie */}
                       <td className="p-4">
-                        <div className="font-bold">{g.internalId}</div>
-                        <div className="flex flex-col gap-1">
-                          <div className={`text-sm font-bold ${g.hidePrice ? 'text-earth-accent' : 'text-earth-main'}`}>
-                            {g.price ? `${g.price} PLN` : '-'} / {g.priceEur ? `${g.priceEur} EUR` : '-'}
-                          </div>
-                          {g.hidePrice && (
-                            <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-tighter bg-earth-accent/10 text-earth-accent px-1.5 py-0.5 rounded w-fit border border-earth-accent/20">
-                              <EyeOff className="w-2.5 h-2.5" /> Ukryta (Zapytaj)
-                            </div>
-                          )}
+                        <div className="flex justify-center">
+                          {(g.imageUrls && g.imageUrls.length > 0) || g.imageUrl ? (
+                             <img src={g.imageUrls?.[0] || g.imageUrl} alt="" className="w-32 h-32 object-cover rounded-2xl shadow-md border border-earth-dark/10" />
+                          ) : <div className="w-32 h-32 bg-gray-100 rounded-2xl shadow-inner flex items-center justify-center text-gray-400 text-xs">Brak</div>}
                         </div>
-                        {g.isSecret && <div className="mt-1 flex items-center gap-1 text-[10px] uppercase font-black text-earth-dark/40"><Lock className="w-2.5 h-2.5"/> Tajna oferta</div>}
-                        {g.isPremium && <div className="mt-0.5 flex items-center gap-1 text-[10px] uppercase font-black text-amber-600"><ShieldCheck className="w-2.5 h-2.5"/> Oferta Premium</div>}
                       </td>
+
+                      {/* 2. ID */}
                       <td className="p-4">
-                        <div className="font-medium text-earth-dark">{g.morph}</div>
-                        <div className="text-xs text-earth-dark/50 mt-0.5">{categories.find(c => c.id === g.categoryId)?.namePl || g.categoryId}</div>
-                        {g.description && (
-                          <div className="mt-2 text-[10px] text-earth-dark/40 bg-earth-beige/40 p-1.5 rounded border border-earth-dark/5 italic leading-tight max-w-[200px]">
+                        <div className="font-black text-earth-dark text-base tracking-tight">{g.internalId}</div>
+                        <div className="flex flex-col gap-0.5 mt-1">
+                          {g.isSecret && <div className="flex items-center gap-1 text-[9px] uppercase font-black text-earth-dark/40 border border-earth-dark/10 px-1 rounded w-fit bg-white"><Lock className="w-2 h-2"/> Tajna</div>}
+                          {g.isPremium && <div className="flex items-center gap-1 text-[9px] uppercase font-black text-amber-600 border border-amber-200 px-1 rounded w-fit bg-amber-50"><ShieldCheck className="w-2 h-2"/> Prem.</div>}
+                        </div>
+                      </td>
+                      {/* 3. Morph */}
+                      <td className="p-4">
+                        {isQuickEdit ? (
+                          <div className="flex flex-col gap-1">
+                            <input 
+                              type="text" 
+                              list="morph-suggestions"
+                              defaultValue={g.morph} 
+                              onBlur={async (e) => {
+                                const val = e.target.value;
+                                if (val !== g.morph) {
+                                  handleQuickUpdate(g.id, { morph: val });
+                                }
+                              }}
+                              className="w-full bg-white/50 border border-earth-dark/10 rounded px-2 py-1.5 focus:border-earth-accent outline-none text-lg font-semibold text-earth-dark"
+                              placeholder="Morph..."
+                            />
+                            <div className="text-[11px] text-earth-dark/40 mt-1 font-bold tracking-wide">{categories.find(c => c.id === g.categoryId)?.namePl || g.categoryId}</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="font-bold text-earth-dark text-lg leading-tight">{g.morph}</div>
+                            <div className="text-[11px] text-earth-dark/40 mt-1 uppercase font-bold tracking-widest">{categories.find(c => c.id === g.categoryId)?.namePl || g.categoryId}</div>
+                          </>
+                        )}
+                        {g.description && !isQuickEdit && (
+                          <div className="mt-2 text-[10px] text-earth-dark/40 italic line-clamp-1 hover:line-clamp-none cursor-default max-w-[180px]">
                             {g.description}
                           </div>
                         )}
                       </td>
-                      <td className="p-4 text-earth-dark/80">{g.gender} <br/><span className="text-xs font-mono">{g.weight}g</span></td>
-                      <td className="p-4">
+
+                      {/* 4. Płeć / Waga */}
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span className={`text-[13px] font-black uppercase px-3 py-1 rounded-full w-fit shadow-sm ${g.gender === 'Male' ? 'bg-blue-50 text-blue-600 border border-blue-100' : g.gender === 'Female' ? 'bg-pink-50 text-pink-600 border border-pink-100' : 'bg-gray-50 text-gray-500 border border-gray-100'}`}>
+                            {g.gender === 'Male' ? 'Samiec' : g.gender === 'Female' ? 'Samica' : 'N/S'}
+                          </span>
+                          {isQuickEdit ? (
+                            <div className="flex items-center gap-1">
+                              <input 
+                                type="number" 
+                                step="0.1"
+                                defaultValue={g.weight} 
+                                onBlur={async (e) => {
+                                  const val = e.target.value ? parseFloat(e.target.value) : null;
+                                  if (val !== g.weight) {
+                                    handleQuickUpdate(g.id, { weight: val });
+                                  }
+                                }}
+                                className="w-16 bg-white/50 border border-earth-dark/10 rounded px-2 py-1 focus:border-earth-accent outline-none text-sm font-mono font-bold text-center"
+                                placeholder="0"
+                              />
+                              <span className="text-[10px] font-bold text-earth-dark/30">g</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-mono font-bold text-earth-dark/70 bg-white/20 px-2 py-0.5 rounded">{g.weight && g.weight !== 0 ? `${g.weight}g` : '-'}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 5. Status */}
+                      <td className="p-4 text-center">
                          <select 
                            value={g.status}
                            onChange={async e => {
-                             await supabase.from('geckos').update({ status: e.target.value }).eq('id', g.id);
-                             fetchData();
+                             const newStatus = e.target.value;
+                             await supabase.from('geckos').update({ status: newStatus }).eq('id', g.id);
+                             setGeckos(prev => prev.map(item => item.id === g.id ? { ...item, status: newStatus } : item));
                            }}
-                           className={`p-2 rounded font-bold text-sm border-0 shadow-sm ${g.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : g.status === 'RESERVED' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}
+                           className={`p-2.5 rounded-xl font-black text-xs uppercase border-2 shadow-sm transition-all focus:ring-0 bg-white ${g.status === 'AVAILABLE' ? 'text-green-600 border-green-200' : g.status === 'RESERVED' ? 'text-orange-600 border-orange-200' : 'text-gray-500 border-gray-200'}`}
                          >
                            <option value="AVAILABLE">Dostępny</option>
                            <option value="RESERVED">Rezerwacja</option>
                            <option value="SOLD">Sprzedany</option>
                          </select>
                       </td>
+
+                      {/* 6. Cena */}
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
-                           <button type="button" onClick={async () => { await supabase.from('geckos').update({ isHidden: !g.isHidden }).eq('id', g.id); fetchData(); }} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors" title={g.isHidden ? "Pokaż na stronie" : "Ukryj na stronie"}>
+                        <div className="flex flex-col gap-1">
+                          {isQuickEdit ? (
+                             <>
+                               <div className="flex items-center gap-1 group/price relative">
+                                <input 
+                                  id={`pln-input-${g.id}`}
+                                  type="number" 
+                                  defaultValue={g.price} 
+                                  onBlur={async (e) => {
+                                    const val = e.target.value ? parseFloat(e.target.value) : null;
+                                    if (val !== g.price) {
+                                      handleQuickUpdate(g.id, { price: val });
+                                    }
+                                  }}
+                                  className="w-24 bg-white/50 border border-earth-dark/10 rounded px-2 py-1 focus:border-earth-accent outline-none text-xs font-bold"
+                                  placeholder="PLN"
+                                />
+                                <span className="text-[10px] text-earth-dark/30 font-bold">PLN</span>
+                                
+                                <button 
+                                  type="button"
+                                  onClick={async () => {
+                                    const plnInput = document.getElementById(`pln-input-${g.id}`) as HTMLInputElement;
+                                    const eurInput = document.getElementById(`eur-input-${g.id}`) as HTMLInputElement;
+                                    const pVal = plnInput?.value ? parseFloat(plnInput.value) : null;
+                                    const eVal = eurInput?.value ? parseFloat(eurInput.value) : null;
+
+                                    let activeRate = eurRate || 4.30;
+                                    if (!eurRate || eurRate === 4.30) {
+                                      const { data } = await supabase.from('app_settings').select('value').eq('id', 'eur_rate').maybeSingle();
+                                      if (data?.value) activeRate = parseFloat(data.value) || 4.30;
+                                    }
+
+                                    if (pVal) {
+                                      const rounded = Math.ceil((pVal / activeRate) / 5) * 5;
+                                      handleQuickUpdate(g.id, { price: pVal, priceEur: rounded });
+                                      if (eurInput) eurInput.value = rounded.toString();
+                                    } else if (eVal) {
+                                      const roundedPln = Math.round((eVal * activeRate) / 10) * 10;
+                                      handleQuickUpdate(g.id, { price: roundedPln, priceEur: eVal });
+                                      if (plnInput) plnInput.value = roundedPln.toString();
+                                    }
+                                  }}
+                                  className="p-1.5 bg-earth-accent text-white rounded-md hover:bg-orange-600 transition-all shadow-sm ml-1"
+                                  title="Przelicz ceny (PLN <-> EUR)"
+                                >
+                                  <Wand2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <input 
+                                  id={`eur-input-${g.id}`}
+                                  type="number" 
+                                  defaultValue={g.priceEur} 
+                                  onBlur={async (e) => {
+                                    const val = e.target.value ? parseFloat(e.target.value) : null;
+                                    if (val !== g.priceEur) {
+                                      handleQuickUpdate(g.id, { priceEur: val });
+                                    }
+                                  }}
+                                  className="w-24 bg-white/50 border border-earth-dark/10 rounded px-2 py-1 focus:border-earth-accent outline-none text-xs font-bold"
+                                  placeholder="EUR"
+                                />
+                                <span className="text-[10px] text-earth-dark/30 font-bold">EUR</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col">
+                              <div className="text-sm font-black text-earth-main">{g.price ? `${g.price} PLN` : '-'}</div>
+                              <div className="text-xs font-bold text-earth-dark/40">{g.priceEur ? `${g.priceEur} EUR` : '-'}</div>
+                            </div>
+                          )}
+
+                          {g.hidePrice && (
+                            <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-tight bg-earth-accent/10 text-earth-accent px-2 py-0.5 rounded-full w-fit border border-earth-accent/20 mt-1">
+                              <EyeOff className="w-2.5 h-2.5" /> Ukryta
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 7. Akcje */}
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                           <button type="button" onClick={async () => { 
+                             const newHidden = !g.isHidden;
+                             await supabase.from('geckos').update({ isHidden: newHidden }).eq('id', g.id); 
+                             setGeckos(prev => prev.map(item => item.id === g.id ? { ...item, isHidden: newHidden } : item));
+                           }} className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors shadow-sm" title={g.isHidden ? "Pokaż na stronie" : "Ukryj na stronie"}>
                              {g.isHidden ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                            </button>
-                           <button type="button" onClick={() => editGecko(g)} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"><Edit className="w-4 h-4"/></button>
-                           <button type="button" onClick={() => deleteGecko(g.id, g.imageUrls || [g.imageUrl])} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"><Trash2 className="w-4 h-4"/></button>
+                           <button type="button" onClick={() => editGecko(g)} className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm"><Edit className="w-4 h-4"/></button>
+                           <button type="button" onClick={() => deleteGecko(g.id, g.imageUrls || [g.imageUrl])} className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors shadow-sm"><Trash2 className="w-4 h-4"/></button>
                         </div>
                       </td>
                     </tr>
@@ -483,6 +767,14 @@ export default function GeckoManager() {
           </div>
         )}
       </div>
+
+      {mounted && (
+        <datalist id="morph-suggestions">
+          {uniqueMorphs.map(m => (
+            <option key={m as string} value={m as string} />
+          ))}
+        </datalist>
+      )}
     </div>
   );
 }

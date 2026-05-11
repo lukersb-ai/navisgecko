@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Info, Weight, Dna, ShoppingCart, ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
-import { categories } from '@/data/geckos';
+
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { supabase } from '@/lib/supabase';
@@ -49,6 +49,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
           src={images[currentImage]}
           alt={gecko.morph || 'Gecko'}
           fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover transition-opacity duration-300"
         />
         
@@ -91,13 +92,13 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
       <div className="p-6 flex-grow flex flex-col">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-2xl font-bold text-earth-dark">
-            {gecko.hidePrice && (!pricesRevealed || ['sold', 'reserved'].includes(gecko.status?.toLowerCase()))
-              ? t('askPrice')
-              : (locale === 'en' 
-                 ? (gecko.priceEur ? `${gecko.priceEur} EUR` : t('askPrice'))
-                 : (gecko.price ? `${gecko.price} PLN` : t('askPrice'))
-                )
-            }
+            {(() => {
+              if (['sold', 'reserved'].includes(gecko.status?.toLowerCase())) return '---';
+              if (gecko.hidePrice && !pricesRevealed) return t('askPrice');
+              const price = locale === 'en' ? gecko.priceEur : gecko.price;
+              const currency = locale === 'en' ? 'EUR' : 'PLN';
+              return price ? `${price} ${currency}` : t('askPrice');
+            })()}
           </h3>
           <span className="text-sm font-mono text-earth-dark/50 bg-earth-beige/50 px-2 py-1 rounded">{t('id')}: {gecko.internalId}</span>
         </div>
@@ -113,7 +114,7 @@ function GeckoCard({ gecko, locale, pricesRevealed }: { gecko: any, locale: stri
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-earth-dark/50 uppercase tracking-wider mb-1 flex items-center gap-1"><Weight className="w-3 h-3"/> {t('weight')}</span>
-            <span className="font-medium text-earth-dark">{gecko.weight || 0}g</span>
+            <span className="font-medium text-earth-dark">{gecko.weight && gecko.weight !== 0 ? `${gecko.weight}g` : '-'}</span>
           </div>
 
           {/* Details Button - Neutral & Medium-Small */}
