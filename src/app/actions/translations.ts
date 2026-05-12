@@ -87,7 +87,7 @@ export async function saveTranslationsList(plData: unknown, enData: unknown) {
     if (error) throw error;
 
     // 3. Wyczyść Cache, żeby zmiany były widoczne od razu
-    revalidateTag('translations');
+    revalidateTag('translations', { expire: 0 });
 
     return { success: true };
   } catch (err) {
