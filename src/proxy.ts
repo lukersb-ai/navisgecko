@@ -6,7 +6,7 @@ import { routing } from './i18n/routing';
 // next-intl middleware handles locale routing
 const intlMiddleware = createMiddleware(routing);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ── Admin route guard ──────────────────────────────────────────────────────
