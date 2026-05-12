@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck, Wand2, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react';
 import { updateGeckoOrderAction, reorderAllGeckosAction } from '@/app/actions/geckos';
 import { compressImage } from '@/lib/image-utils';
+import Image from 'next/image';
 
 export default function GeckoManager() {
   const [geckos, setGeckos] = useState<any[]>([]);
@@ -595,7 +596,15 @@ export default function GeckoManager() {
                       <td className="p-4">
                         <div className="flex justify-center">
                           {(g.imageUrls && g.imageUrls.length > 0) || g.imageUrl ? (
-                             <img src={g.imageUrls?.[0] || g.imageUrl} alt="" className="w-32 h-32 object-cover rounded-2xl shadow-md border border-earth-dark/10" />
+                             <div className="relative w-32 h-32">
+                               <Image 
+                                 src={g.imageUrls?.[0] || g.imageUrl} 
+                                 alt="" 
+                                 fill
+                                 sizes="128px"
+                                 className="object-cover rounded-2xl shadow-md border border-earth-dark/10" 
+                               />
+                             </div>
                           ) : <div className="w-32 h-32 bg-gray-100 rounded-2xl shadow-inner flex items-center justify-center text-gray-400 text-xs">Brak</div>}
                         </div>
                       </td>

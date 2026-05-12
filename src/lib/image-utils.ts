@@ -1,5 +1,5 @@
 /**
- * Kompresuje plik obrazu do formatu JPEG o wysokiej jakości (80%) i ograniczonym rozmiarze (max 1920px).
+ * Kompresuje plik obrazu do formatu WebP o wysokiej jakości (80%) i ograniczonym rozmiarze (max 1440px).
  */
 export const compressImage = (file: File): Promise<File> => {
   return new Promise((resolve) => {
@@ -15,8 +15,8 @@ export const compressImage = (file: File): Promise<File> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1920; 
-        const MAX_HEIGHT = 1920;
+        const MAX_WIDTH = 1440; 
+        const MAX_HEIGHT = 1440;
         let width = img.width;
         let height = img.height;
 
@@ -41,15 +41,15 @@ export const compressImage = (file: File): Promise<File> => {
         
         canvas.toBlob((blob) => {
           if (blob) {
-            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-              type: 'image/jpeg',
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+              type: 'image/webp',
               lastModified: Date.now(),
             });
             resolve(compressedFile);
           } else {
             resolve(file);
           }
-        }, 'image/jpeg', 0.8); 
+        }, 'image/webp', 0.8); 
       };
       img.onerror = () => resolve(file);
     };

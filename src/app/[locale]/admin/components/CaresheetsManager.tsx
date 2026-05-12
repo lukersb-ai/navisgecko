@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { LoaderCircle, Plus, Trash2, Save, FileText } from 'lucide-react';
+import { LoaderCircle, Plus, Trash2, Save, FileText, Image as ImageIcon } from 'lucide-react';
+import { compressImage } from '@/lib/image-utils';
 import TiptapEditor from './TiptapEditor';
+import { revalidateSiteAction } from '@/app/actions/revalidate';
+import Image from 'next/image';
 
 export default function CaresheetsManager() {
   const [caresheets, setCaresheets] = useState<any[]>([]);
@@ -17,7 +20,15 @@ export default function CaresheetsManager() {
   const [nameEn, setNameEn] = useState('');
   const [descPl, setDescPl] = useState('');
   const [descEn, setDescEn] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [difficulty, setDifficulty] = useState('Łatwy / Początkujący');
+  const [tempRange, setTempRange] = useState('22-26°C');
+  const [humidityRange, setHumidityRange] = useState('60-80%');
+  const [lifespan, setLifespan] = useState('15+ lat');
   const [cards, setCards] = useState<any[]>([]);
+  const [isHidden, setIsHidden] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     async function initOptions() {
@@ -45,26 +56,78 @@ export default function CaresheetsManager() {
       setNameEn(data.nameEn || '');
       setDescPl(data.descriptionPl || '');
       setDescEn(data.descriptionEn || '');
+      setImageUrl(data.image_url || '');
+      setDifficulty(data.difficulty || 'Łatwy / Początkujący');
+      setTempRange(data.temp_range || '22-26°C');
+      setHumidityRange(data.humidity_range || '60-80%');
+      setLifespan(data.lifespan || '15+ lat');
+      setIsHidden(data.is_hidden || false);
       setCards(data.cards || []);
+      setFile(null);
     } else {
       // Default to empty if totally new
-      setNamePl(''); setNameEn(''); setDescPl(''); setDescEn(''); setCards([]);
+      setNamePl(''); setNameEn(''); setDescPl(''); setDescEn(''); 
+      setImageUrl(''); setDifficulty('Łatwy / Początkujący'); 
+      setTempRange('22-26°C'); setHumidityRange('60-80%'); setLifespan('15+ lat');
+      setIsHidden(false);
+      setCards([]);
+      setFile(null);
     }
     setLoading(false);
   };
 
+  const uploadImage = async () => {
+    if (!file) return imageUrl;
+    setUploading(true);
+    
+    try {
+      const processedFile = await compressImage(file);
+      const fileExt = processedFile.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage.from('geckos').upload(fileName, processedFile);
+      
+      if (uploadError) {
+        console.error('Błąd uploadu:', uploadError);
+        setUploading(false);
+        return imageUrl;
+      }
+      
+      const { data: { publicUrl } } = supabase.storage.from('geckos').getPublicUrl(fileName);
+      setUploading(false);
+      return publicUrl;
+    } catch (err) {
+      console.error('Błąd kompresji/uploadu:', err);
+      setUploading(false);
+      return imageUrl;
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
+    
+    const finalImageUrl = await uploadImage();
+    
     const { error } = await supabase.from('caresheets').upsert({
       id: activeSpecies,
       namePl, nameEn,
       descriptionPl: descPl,
       descriptionEn: descEn,
+      image_url: finalImageUrl,
+      difficulty,
+      temp_range: tempRange,
+      humidity_range: humidityRange,
+      lifespan,
+      is_hidden: isHidden,
       cards: cards
     });
 
-    if (error) alert('Błąd: ' + error.message);
-    else alert('Zapisano pomyślnie!');
+    if (error) {
+      alert('Błąd: ' + error.message);
+    } else {
+      await revalidateSiteAction();
+      alert('Zapisano pomyślnie i odświeżono pamięć podręczną!');
+    }
     setSaving(false);
   };
 
@@ -95,19 +158,30 @@ export default function CaresheetsManager() {
               <p className="text-earth-dark/60 text-sm">Edytuj strukturalne kafelki dla Gatunków (Caresheets).</p>
             </div>
           </div>
-          <select 
-            value={activeSpecies} 
-            onChange={(e) => setActiveSpecies(e.target.value)}
-            className="w-full md:w-auto px-4 py-2 border border-earth-dark/20 rounded-lg bg-white text-earth-dark font-medium cursor-pointer"
-          >
-            {categoriesList.length > 0 ? (
-              categoriesList.map(cat => (
-                 <option key={cat.id} value={cat.id}>{cat.namePl}</option>
-              ))
-            ) : (
-              <option value="leopard-gecko">Brak kategorii w bazie</option>
-            )}
-          </select>
+            <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+              <label className="flex items-center gap-2 cursor-pointer group bg-white border border-earth-dark/10 px-4 py-2 rounded-lg hover:bg-earth-beige/10 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={isHidden} 
+                  onChange={e => setIsHidden(e.target.checked)}
+                  className="w-4 h-4 rounded border-earth-dark/20 text-earth-accent focus:ring-earth-accent cursor-pointer"
+                />
+                <span className="text-sm font-bold text-earth-dark group-hover:text-earth-accent transition-colors">Ukryj ten poradnik</span>
+              </label>
+              <select 
+                value={activeSpecies} 
+                onChange={(e) => setActiveSpecies(e.target.value)}
+                className="px-4 py-2 border border-earth-dark/20 rounded-lg bg-white text-earth-dark font-medium cursor-pointer"
+              >
+                {categoriesList.length > 0 ? (
+                  categoriesList.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.namePl}</option>
+                  ))
+                ) : (
+                  <option value="leopard-gecko">Brak kategorii w bazie</option>
+                )}
+              </select>
+            </div>
         </div>
       </div>
 
@@ -123,6 +197,40 @@ export default function CaresheetsManager() {
               <div className="col-span-full"><label className="block font-bold text-sm mb-1">Krótki opis (EN)</label><textarea value={descEn} onChange={e=>setDescEn(e.target.value)} className="w-full border p-2 rounded" rows={2}/></div>
             </div>
 
+            <div className="bg-earth-beige/20 p-6 rounded-xl border border-earth-dark/10 space-y-4">
+              <h3 className="text-lg font-bold text-earth-dark border-b border-earth-dark/10 pb-2">Dane do wizytówki i nagłówka</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className="block font-bold text-sm mb-1">Poziom trudności</label><input value={difficulty} onChange={e=>setDifficulty(e.target.value)} className="w-full border p-2 rounded bg-white" placeholder="np. Łatwy / Początkujący" /></div>
+                <div><label className="block font-bold text-sm mb-1">Długość życia</label><input value={lifespan} onChange={e=>setLifespan(e.target.value)} className="w-full border p-2 rounded bg-white" placeholder="np. 15-20 lat" /></div>
+                <div><label className="block font-bold text-sm mb-1">Zakres temperatur</label><input value={tempRange} onChange={e=>setTempRange(e.target.value)} className="w-full border p-2 rounded bg-white" placeholder="np. 22-26°C" /></div>
+                <div><label className="block font-bold text-sm mb-1">Zakres wilgotności</label><input value={humidityRange} onChange={e=>setHumidityRange(e.target.value)} className="w-full border p-2 rounded bg-white" placeholder="np. 60-80%" /></div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block font-bold text-sm mb-2">Główne zdjęcie (Hero Image)</label>
+                {imageUrl && !file && (
+                  <div className="mb-4 relative w-full md:w-1/2 aspect-[16/9] rounded-lg overflow-hidden border border-earth-dark/20">
+                    <Image 
+                      src={imageUrl} 
+                      alt="Current" 
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover" 
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-earth-dark/30 rounded-lg cursor-pointer hover:bg-earth-dark/5 transition-colors w-full md:w-auto">
+                    <ImageIcon className="w-5 h-5 text-earth-dark/60" />
+                    <span className="text-earth-dark/80 font-medium">{file ? file.name : 'Wybierz nowe zdjęcie z dysku...'}</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={e => { if (e.target.files?.[0]) setFile(e.target.files[0]); }} />
+                  </label>
+                  {file && <button onClick={() => setFile(null)} className="text-red-500 hover:text-red-600 font-medium px-3 py-2">Anuluj zmianę zdjęcia</button>}
+                </div>
+              </div>
+            </div>
+
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Kafelki Informacyjne</h3>
@@ -136,8 +244,16 @@ export default function CaresheetsManager() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12">
                       <div><label className="block text-xs font-bold mb-1">Tytuł PL</label><input value={card.titlePl} onChange={e=>updateCard(idx, 'titlePl', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
                       <div><label className="block text-xs font-bold mb-1">Tytuł EN</label><input value={card.titleEn} onChange={e=>updateCard(idx, 'titleEn', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
-                      <div className="col-span-full"><label className="block text-xs font-bold mb-1">Treść kafelka PL</label><textarea value={card.descPl} onChange={e=>updateCard(idx, 'descPl', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
-                      <div className="col-span-full"><label className="block text-xs font-bold mb-1">Treść kafelka EN</label><textarea value={card.descEn} onChange={e=>updateCard(idx, 'descEn', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
+                      <div className="col-span-full"><label className="block text-xs font-bold mb-1">Krótki opis kafelka PL</label><textarea value={card.descPl} onChange={e=>updateCard(idx, 'descPl', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
+                      <div className="col-span-full"><label className="block text-xs font-bold mb-1">Krótki opis kafelka EN</label><textarea value={card.descEn} onChange={e=>updateCard(idx, 'descEn', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
+                      
+                      <div className="col-span-full"><label className="block text-xs font-bold mb-1">Pełna treść kafelka PL (Opcjonalnie)</label>
+                        <TiptapEditor value={card.contentPl || ''} onChange={(val) => updateCard(idx, 'contentPl', val)} />
+                      </div>
+                      <div className="col-span-full"><label className="block text-xs font-bold mb-1">Pełna treść kafelka EN (Opcjonalnie)</label>
+                        <TiptapEditor value={card.contentEn || ''} onChange={(val) => updateCard(idx, 'contentEn', val)} />
+                      </div>
+
                       <div className="col-span-full">
                         <label className="block text-xs font-bold mb-1">Ikona Kafelka</label>
                         <select 
@@ -145,12 +261,19 @@ export default function CaresheetsManager() {
                           onChange={e=>updateCard(idx, 'iconName', e.target.value)} 
                           className="w-full border p-2 rounded text-sm bg-white"
                         >
-                          <option value="Info">Info (Zwykła informacja)</option>
-                          <option value="ThermometerSun">ThermometerSun (Temperatura / Ciepło)</option>
+                          <option value="Home">Home (Terrarium / Dom)</option>
+                          <option value="TreePine">TreePine (Wystrój / Gałęzie)</option>
+                          <option value="ThermometerSun">ThermometerSun (Temperatura)</option>
+                          <option value="Droplets">Droplets (Wilgotność / Woda)</option>
                           <option value="Apple">Apple (Dieta / Jedzenie)</option>
-                          <option value="Grid">Grid (Terrarium / Przestrzeń pozioma)</option>
-                          <option value="TreePine">TreePine (Terrarium / Gałęzie / Przestrzeń wertykalna)</option>
-                          <option value="HeartHandshake">HeartHandshake (Oswajanie / Zachowanie)</option>
+                          <option value="HeartHandshake">HeartHandshake (Oswajanie)</option>
+                          <option value="Egg">Egg (Rozmnażanie / Jaja)</option>
+                          <option value="ShieldCheck">ShieldCheck (Rutyna / Zdrowie)</option>
+                          <option value="Zap">Zap (Behawior / Aktywność)</option>
+                          <option value="Sprout">Sprout (Roślinność)</option>
+                          <option value="Compass">Compass (Planowanie)</option>
+                          <option value="Info">Info (Informacje)</option>
+                          <option value="Grid">Grid (Inne)</option>
                         </select>
                       </div>
                     </div>
@@ -160,8 +283,8 @@ export default function CaresheetsManager() {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-earth-dark/10">
-              <button disabled={saving} onClick={handleSave} className="flex items-center gap-2 bg-earth-accent hover:bg-earth-dark text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
-                {saving ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Zapisz Poradnik
+              <button disabled={saving || uploading} onClick={handleSave} className="flex items-center gap-2 bg-earth-accent hover:bg-earth-dark text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
+                {(saving || uploading) ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Zapisz Poradnik
               </button>
             </div>
           </div>

@@ -11,11 +11,14 @@ export default async function CaresheetsGalleryPage() {
   const { data: categories } = await supabase.from('categories').select('id').eq('isPrivate', false);
   const publicIds = categories?.map(c => c.id) || [];
   
-  const { data: caresheetsDB } = await supabase.from('caresheets').select('*').in('id', publicIds);
+  const { data: caresheetsDB } = await supabase.from('caresheets')
+    .select('id, namePl, nameEn, descriptionPl, descriptionEn, difficulty, temp_range, humidity_range, lifespan, image_url, is_hidden')
+    .in('id', publicIds)
+    .eq('is_hidden', false);
 
   return (
     <div className="min-h-screen bg-background py-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-earth-accent/5 rounded-full blur-3xl -z-10"></div>
           <h1 className="text-4xl md:text-6xl font-black text-earth-dark mb-4 tracking-tight">{t('pageTitle')}</h1>

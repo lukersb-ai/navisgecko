@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { LoaderCircle, Trash2, Plus, Edit, Image as ImageIcon, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react';
 import { updateBreederOrderAction, reorderAllBreedersAction } from '@/app/actions/breeders';
 import { compressImage } from '@/lib/image-utils';
+import Image from 'next/image';
 
 export default function BreedersManager() {
   const [breeders, setBreeders] = useState<any[]>([]);
@@ -280,7 +281,19 @@ export default function BreedersManager() {
                   {breeders.map(b => (
                     <tr key={b.id} className="hover:bg-earth-beige/20 transition-colors">
                       <td className="p-4 w-40">
-                        {b.imageUrl ? <img src={b.imageUrl} alt="" className="w-32 h-32 object-cover rounded-lg shadow-md border border-earth-dark/10" /> : <div className="w-32 h-32 bg-gray-200 rounded-lg"></div>}
+                        {b.imageUrl ? (
+                          <div className="relative w-32 h-32">
+                            <Image 
+                              src={b.imageUrl} 
+                              alt="" 
+                              fill
+                              sizes="128px"
+                              className="object-cover rounded-lg shadow-md border border-earth-dark/10" 
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-32 h-32 bg-gray-200 rounded-lg"></div>
+                        )}
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex flex-col items-center gap-1">
