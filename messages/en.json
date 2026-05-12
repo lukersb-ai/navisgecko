@@ -37,7 +37,7 @@
   },
   "Available": {
     "title": "Available Animals",
-    "description": "Browse our current collection. Each animal is described in detail. If you are interested, click \"Inquire\" and proceed to the form.",
+    "description": "Browse our current collection. If you are interested, click \"Inquire\" and proceed to the contact form.",
     "all": "All",
     "askPrice": "Inquire",
     "statusAvailable": "AVAILABLE",

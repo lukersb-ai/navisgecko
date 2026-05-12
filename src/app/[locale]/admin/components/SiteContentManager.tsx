@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { revalidateSiteAction } from '@/app/actions/revalidate';
+import { updateSiteContentAction } from '@/app/actions/siteContent';
 import { LoaderCircle, Save, FileText } from 'lucide-react';
 import TiptapEditor from './TiptapEditor';
 
@@ -44,22 +45,13 @@ export default function SiteContentManager() {
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from('site_content')
-      .upsert({
-        id: activeSection,
-        content_pl: contentPl,
-        content_en: contentEn,
-        updated_at: new Date().toISOString(),
-      });
+    
+    const result = await updateSiteContentAction(activeSection, contentPl, contentEn);
 
-    if (error) {
-      alert('Błąd podczas zapisu: ' + error.message);
+    if (result.error) {
+      alert('Błąd podczas zapisu: ' + result.error);
     } else {
-      // Trigger on-demand revalidation via authenticated server action
-      // (no secret token needed on the client side)
-      await revalidateSiteAction();
-      alert('Treść pomyślnie zapisana! Strona zostanie zaktualizowana.');
+      alert('Treść pomyślnie zapisana! Strona została zaktualizowana.');
     }
     setSaving(false);
   };
