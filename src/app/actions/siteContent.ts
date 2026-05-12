@@ -18,27 +18,34 @@ export async function updateSiteContentAction(id: string, contentPl: string, con
   // 2. Inicjalizacja klienta Admina (Service Role)
   const adminClient = createSupabaseAdminClient();
   if (!adminClient) {
-    return { error: 'Błąd konfiguracji serwera (brak klucza Service Role).' };
+    console.error('updateSiteContentAction: Missing SUPABASE_SERVICE_ROLE_KEY');
+    return { error: 'Błąd konfiguracji serwera: brak klucza Service Role w zmiennych środowiskowych Vercel.' };
   }
 
   // 3. Upsert danych
   const { error } = await adminClient
     .from('site_content')
-    .upsert({
-      id,
-      content_pl: contentPl,
-      content_en: contentEn,
-      updated_at: new Date().toISOString(),
-    });
+    .upsert(
+      {
+        id,
+        content_pl: contentPl,
+        content_en: contentEn,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
 
   if (error) {
-    console.error('updateSiteContentAction Error:', error);
-    return { error: error.message };
+    console.error('updateSiteContentAction Database Error:', error);
+    return { error: `Błąd bazy danych: ${error.message} (${error.code || 'no-code'})` };
   }
 
   // 4. Automatyczna rewalidacja strony (żeby zmiany były widoczne u klientów)
   try {
-    await revalidateSiteAction();
+    const revResult = await revalidateSiteAction();
+    if (!revResult.success) {
+      console.warn('Revalidation action returned failure:', revResult.error);
+    }
   } catch (revalidateErr) {
     console.warn('Revalidation failed, but content was saved:', revalidateErr);
   }
