@@ -1,5 +1,6 @@
 import {getRequestConfig} from 'next-intl/server';
 import {routing} from './routing';
+import {getMessagesForLocale} from '@/app/actions/translations';
 
 export default getRequestConfig(async ({requestLocale}) => {
   let locale = await requestLocale;
@@ -8,8 +9,11 @@ export default getRequestConfig(async ({requestLocale}) => {
     locale = routing.defaultLocale;
   }
 
+  // Pobierz tłumaczenia z bazy (lub cache) zamiast z plików JSON
+  const messages = await getMessagesForLocale(locale);
+
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default
+    messages: messages || (await import(`../../messages/${locale}.json`)).default
   };
 });
