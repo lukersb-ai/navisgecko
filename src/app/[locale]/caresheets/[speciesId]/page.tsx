@@ -3,7 +3,7 @@
 import { use } from 'react';
 import { useLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
-import { motion } from 'framer-motion';
+
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { 
@@ -93,7 +93,7 @@ export default function SpeciesCaresheetPage({ params }: { params: Promise<{ spe
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         
         {/* Floating Metadata Card */}
-        <div className="relative -mt-16 z-20 bg-white rounded-3xl shadow-2xl p-6 md:p-8 mb-16 border border-earth-dark/5 flex flex-wrap justify-center gap-8 md:gap-16">
+        <div className="relative -mt-16 z-20 bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-16 border border-earth-dark/5 flex flex-wrap justify-center gap-8 md:gap-16">
           <div className="flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-earth-accent/10 flex items-center justify-center mb-3">
               <ThermometerSun className="w-6 h-6 text-earth-accent" />
@@ -134,19 +134,16 @@ export default function SpeciesCaresheetPage({ params }: { params: Promise<{ spe
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {(species.cards || []).map((card: any, index: number) => (
-            <motion.div 
+            <div 
               key={card.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="bg-white/40 backdrop-blur-sm rounded-[2.5rem] p-8 md:p-12 shadow-xl shadow-earth-dark/5 border border-white/60 hover:border-earth-accent/20 hover:shadow-2xl hover:shadow-earth-accent/5 hover:-translate-y-1.5 transition-all duration-500 group flex flex-col"
+              className="bg-white rounded-2xl p-8 md:p-12 shadow-xl border border-earth-dark/5 transition-all duration-300 hover:shadow-2xl group flex flex-col"
             >
-              <div className="flex flex-col gap-8">
+              <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-6">
-                  <div className="p-5 bg-white rounded-3xl shadow-lg shadow-earth-dark/5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                  <div className="p-5 bg-earth-beige/50 rounded-2xl shadow-sm group-hover:scale-105 transition-transform duration-300">
                     {iconMap[card.iconName] || <Info className="w-10 h-10 text-earth-dark" />}
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-black text-earth-dark leading-tight group-hover:text-earth-accent transition-colors">
+                  <h3 className="text-2xl font-bold text-earth-dark leading-tight group-hover:text-earth-accent transition-colors">
                     {isPl ? card.titlePl : card.titleEn}
                   </h3>
                 </div>
@@ -157,7 +154,7 @@ export default function SpeciesCaresheetPage({ params }: { params: Promise<{ spe
                   </p>
                   
                   {((isPl && card.contentPl) || (!isPl && card.contentEn)) && (
-                    <div className="mt-8 pt-8 border-t border-earth-dark/10 space-y-4">
+                    <div className="mt-4 pt-4 border-t border-earth-dark/10 space-y-3">
                       <div 
                         className="text-earth-dark/70 leading-relaxed text-lg prose prose-earth prose-sm max-w-none"
                         dangerouslySetInnerHTML={{ __html: isPl ? card.contentPl : card.contentEn }}
@@ -166,7 +163,7 @@ export default function SpeciesCaresheetPage({ params }: { params: Promise<{ spe
                   )}
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
