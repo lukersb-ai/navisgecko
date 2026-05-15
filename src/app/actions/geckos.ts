@@ -167,15 +167,33 @@ export async function getStorageSizeAction() {
     let totalSize = 0;
 
     const getFolderSize = async (bucketName: string, path: string = ''): Promise<number> => {
-      const { data, error } = await adminClient.storage.from(bucketName).list(path, { limit: 1000 });
-      if (error || !data) return 0;
-      
       let total = 0;
-      for (const item of data) {
-        if (!item.id || !item.metadata) { // Folder
-          total += await getFolderSize(bucketName, path ? `${path}/${item.name}` : item.name);
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await adminClient.storage.from(bucketName).list(path, { 
+          limit: 1000, 
+          offset 
+        });
+        
+        if (error || !data || data.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        for (const item of data) {
+          if (!item.id || !item.metadata) { // Folder (item.id is null for folders in list())
+            total += await getFolderSize(bucketName, path ? `${path}/${item.name}` : item.name);
+          } else {
+            total += item.metadata.size || 0;
+          }
+        }
+
+        if (data.length < 1000) {
+          hasMore = false;
         } else {
-          total += item.metadata.size || 0;
+          offset += 1000;
         }
       }
       return total;
@@ -189,5 +207,186 @@ export async function getStorageSizeAction() {
   } catch (err) {
     console.error('getStorageSizeAction error:', err);
     return 0;
+  }
+}
+
+export async function deleteGeckoAction(id: string, storedUrls: string[]) {
+  // Auth Guard
+  const supabaseServer = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) return { error: 'Brak uprawnień.' };
+
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) return { error: 'No admin client' };
+
+  try {
+    // 1. Usuń pliki ze storage
+    if (storedUrls && storedUrls.length > 0) {
+      const filePaths = storedUrls
+        .map(url => url?.split('/').pop())
+        .filter((path): path is string => !!path);
+      
+      if (filePaths.length > 0) {
+        const { error: storageError } = await adminClient.storage.from('geckos').remove(filePaths);
+        if (storageError) {
+          console.error('Błąd usuwania plików ze storage:', storageError);
+        }
+      }
+    }
+
+    // 2. Usuń rekord z bazy
+    const { error: dbError } = await adminClient.from('geckos').delete().eq('id', id);
+    if (dbError) throw dbError;
+
+    revalidatePath('/', 'layout');
+    revalidatePath('/[locale]/available', 'page');
+    
+    return { success: true };
+  } catch (err: any) {
+    console.error('deleteGeckoAction error:', err);
+    return { error: err.message };
+  }
+}
+
+export async function deleteStorageFileAction(filePath: string) {
+  // Auth Guard
+  const supabaseServer = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) return { error: 'Brak uprawnień.' };
+
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) return { error: 'No admin client' };
+
+  try {
+    const { error } = await adminClient.storage.from('geckos').remove([filePath]);
+    if (error) throw error;
+    return { success: true };
+  } catch (err: any) {
+    console.error('deleteStorageFileAction error:', err);
+    return { error: err.message };
+  }
+}
+
+export async function deleteCategoryAction(categoryId: string) {
+  // Auth Guard
+  const supabaseServer = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) return { error: 'Brak uprawnień.' };
+
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) return { error: 'No admin client' };
+
+  try {
+    // 1. Sprawdź czy jest poradnik i czy ma zdjęcie
+    const { data: caresheet } = await adminClient
+      .from('caresheets')
+      .select('image_url')
+      .eq('id', categoryId)
+      .single();
+
+    if (caresheet?.image_url) {
+      const filePath = caresheet.image_url.split('/').pop();
+      if (filePath) await adminClient.storage.from('geckos').remove([filePath]);
+    }
+
+    // 2. Usuń poradnik
+    await adminClient.from('caresheets').delete().eq('id', categoryId);
+
+    // 3. Usuń kategorię
+    const { error: catError } = await adminClient.from('categories').delete().eq('id', categoryId);
+    if (catError) throw catError;
+
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (err: any) {
+    console.error('deleteCategoryAction error:', err);
+    return { error: err.message };
+  }
+}
+
+export async function cleanupOrphanFilesAction() {
+  // Auth Guard
+  const supabaseServer = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) return { error: 'Brak uprawnień.' };
+
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) return { error: 'No admin client' };
+
+  try {
+    // 1. Pobierz wszystkie pliki ze storage (geckos bucket)
+    const allFiles: string[] = [];
+    const listFiles = async (path: string = '') => {
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await adminClient.storage.from('geckos').list(path, { limit: 1000, offset });
+        if (error || !data) break;
+        for (const item of data) {
+          if (!item.id) { // Folder
+            await listFiles(path ? `${path}/${item.name}` : item.name);
+          } else {
+            allFiles.push(path ? `${path}/${item.name}` : item.name);
+          }
+        }
+        if (data.length < 1000) hasMore = false;
+        else offset += 1000;
+      }
+    };
+    await listFiles();
+
+    // 2. Pobierz wszystkie używane URL-e z bazy
+    const [geckosRes, breedersRes, caresheetsRes] = await Promise.all([
+      adminClient.from('geckos').select('imageUrl, imageUrls'),
+      adminClient.from('breeders').select('imageUrl'),
+      adminClient.from('caresheets').select('image_url')
+    ]);
+
+    const usedFiles = new Set<string>();
+    
+    const extractFilename = (url: string | null) => {
+      if (!url) return null;
+      return url.split('/').pop();
+    };
+
+    geckosRes.data?.forEach(g => {
+      const f1 = extractFilename(g.imageUrl);
+      if (f1) usedFiles.add(f1);
+      if (Array.isArray(g.imageUrls)) {
+        g.imageUrls.forEach((u: string) => {
+          const f = extractFilename(u);
+          if (f) usedFiles.add(f);
+        });
+      }
+    });
+
+    breedersRes.data?.forEach(b => {
+      const f = extractFilename(b.imageUrl);
+      if (f) usedFiles.add(f);
+    });
+
+    caresheetsRes.data?.forEach(c => {
+      const f = extractFilename(c.image_url);
+      if (f) usedFiles.add(f);
+    });
+
+    // 3. Znajdź sieroty
+    const orphans = allFiles.filter(fileName => !usedFiles.has(fileName));
+
+    // 4. Usuń sieroty (partiami po 100)
+    let deletedCount = 0;
+    if (orphans.length > 0) {
+      for (let i = 0; i < orphans.length; i += 100) {
+        const chunk = orphans.slice(i, i + 100);
+        const { error } = await adminClient.storage.from('geckos').remove(chunk);
+        if (!error) deletedCount += chunk.length;
+      }
+    }
+
+    revalidatePath('/', 'layout');
+    return { success: true, deletedCount, orphansFound: orphans.length };
+  } catch (err: any) {
+    console.error('cleanupOrphanFilesAction error:', err);
+    return { error: err.message };
   }
 }

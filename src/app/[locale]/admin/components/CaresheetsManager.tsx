@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LoaderCircle, Plus, Trash2, Save, FileText, Image as ImageIcon } from 'lucide-react';
 import { compressImage } from '@/lib/image-utils';
+import { deleteStorageFileAction } from '@/app/actions/geckos';
 import TiptapEditor from './TiptapEditor';
 import { revalidateSiteAction } from '@/app/actions/revalidate';
 import Image from 'next/image';
@@ -106,6 +107,10 @@ export default function CaresheetsManager() {
   const handleSave = async () => {
     setSaving(true);
     
+    if (file && imageUrl) {
+      const oldPath = imageUrl.split('/').pop();
+      if (oldPath) await deleteStorageFileAction(oldPath);
+    }
     const finalImageUrl = await uploadImage();
     
     const { error } = await supabase.from('caresheets').upsert({

@@ -1,19 +1,44 @@
-const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-async function check() {
-  const { data, error } = await supabase.storage.from('geckos').list();
-  if (error) {
-    console.error('Error:', error);
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing Supabase credentials');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { persistSession: false },
+  realtime: { enabled: false }
+});
+
+async function checkStorage() {
+  console.log('Checking storage buckets...');
+  const { data: buckets, error: bError } = await supabase.storage.listBuckets();
+  if (bError) {
+    console.error('Error listing buckets:', bError);
     return;
   }
-  let totalSize = 0;
-  data.forEach(file => {
-    if (file.metadata && file.metadata.size) {
-      totalSize += file.metadata.size;
+
+  for (const bucket of buckets) {
+    console.log(`\nBucket: ${bucket.name}`);
+    const { data: files, error: fError } = await supabase.storage.from(bucket.name).list('', { limit: 100 });
+    if (fError) {
+      console.error(`Error listing files in ${bucket.name}:`, fError);
+      continue;
     }
-  });
-  console.log('Total Size in geckos bucket:', (totalSize / (1024 * 1024)).toFixed(2), 'MB');
-  console.log('File count:', data.length);
+
+    files.forEach(file => {
+      if (file.id) {
+        const sizeMB = (file.metadata.size / (1024 * 1024)).toFixed(2);
+        console.log(` - ${file.name} (${file.metadata.mimetype}) - ${sizeMB} MB`);
+      } else {
+        console.log(` - [Folder] ${file.name}`);
+      }
+    });
+  }
 }
-check();
+
+checkStorage();

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { LoaderCircle, Save, Key, ShieldCheck, Wand2 } from 'lucide-react';
+import { LoaderCircle, Save, Key, ShieldCheck, Wand2, Trash2, RefreshCcw } from 'lucide-react';
+import { cleanupOrphanFilesAction } from '@/app/actions/geckos';
 
 export default function SettingsManager() {
   const [pricePassword, setPricePassword] = useState('');
@@ -58,6 +59,19 @@ export default function SettingsManager() {
         await supabase.from('geckos').update({ priceEur: rounded }).eq('id', g.id);
       }
     }));
+  };
+
+  const handleCleanup = async () => {
+    if (!confirm('Czy na pewno chcesz usunąć wszystkie nieużywane zdjęcia? Te pliki nie są przypisane do żadnego ogłoszenia i zostaną trwale skasowane.')) return;
+    setSaving(true);
+    const res = await cleanupOrphanFilesAction();
+    setSaving(false);
+    if (res.error) {
+      alert('Błąd: ' + res.error);
+    } else {
+      alert(`Oczyszczanie zakończone! Usunięto ${res.deletedCount} niepotrzebnych plików.`);
+      fetchSettings();
+    }
   };
 
   if (loading) return <div className="flex justify-center p-12"><LoaderCircle className="w-8 h-8 animate-spin text-earth-accent" /></div>;
@@ -175,6 +189,30 @@ export default function SettingsManager() {
                 <Wand2 className="w-4 h-4" /> Przelicz wszystkie ceny
               </button>
             </div>
+          </div>
+        </div>
+
+        <div className="pt-8 border-t border-earth-dark/10">
+          <div className="bg-red-50/50 p-6 rounded-2xl border border-red-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-xl">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-red-900 text-lg">Konserwacja Magazynu</h3>
+                <p className="text-sm text-red-700/70">
+                  Usuwa zdjęcia, które nie są przypisane do żadnego gekona ani poradnika.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleCleanup}
+              disabled={saving}
+              className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+            >
+              {saving ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <RefreshCcw className="w-5 h-5" />}
+              Wyczyść nieużywane pliki
+            </button>
           </div>
         </div>
 

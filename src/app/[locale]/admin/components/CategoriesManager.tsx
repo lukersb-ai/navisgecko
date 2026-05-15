@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LoaderCircle, Save, Trash2, Tags, Plus } from 'lucide-react';
+import { deleteCategoryAction } from '@/app/actions/geckos';
 
 export default function CategoriesManager() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -68,8 +69,9 @@ export default function CategoriesManager() {
     }
     if (!confirm('Czy na pewno chcesz usunąć tę kategorię?')) return;
     
-    const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (!error) fetchCategories();
+    const res = await deleteCategoryAction(id);
+    if (res.error) alert('Błąd: ' + res.error);
+    else fetchCategories();
   };
 
   return (

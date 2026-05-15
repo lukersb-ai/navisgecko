@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LoaderCircle, Trash2, Plus, Edit, Image as ImageIcon, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react';
 import { updateBreederOrderAction, reorderAllBreedersAction } from '@/app/actions/breeders';
+import { deleteStorageFileAction } from '@/app/actions/geckos';
 import { compressImage } from '@/lib/image-utils';
 import Image from 'next/image';
 
@@ -80,7 +81,7 @@ export default function BreedersManager() {
        // Delete old image if it exists
        if (imageUrl) {
          const oldPath = imageUrl.split('/').pop();
-         if (oldPath) await supabase.storage.from('geckos').remove([oldPath]);
+         if (oldPath) await deleteStorageFileAction(oldPath);
        }
        finalImageUrl = await uploadImage();
     }
@@ -189,7 +190,7 @@ export default function BreedersManager() {
     // Delete image from storage
     if (storedUrl) {
       const filePath = storedUrl.split('/').pop();
-      if (filePath) await supabase.storage.from('geckos').remove([filePath]);
+      if (filePath) await deleteStorageFileAction(filePath);
     }
 
     const { error } = await supabase.from('breeders').delete().eq('id', id);

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck, Wand2, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react';
-import { updateGeckoOrderAction, reorderAllGeckosAction, getStorageSizeAction } from '@/app/actions/geckos';
+import { updateGeckoOrderAction, reorderAllGeckosAction, getStorageSizeAction, deleteGeckoAction, deleteStorageFileAction } from '@/app/actions/geckos';
 import { compressImage } from '@/lib/image-utils';
 import Image from 'next/image';
 
@@ -128,6 +128,7 @@ export default function GeckoManager() {
 
   const fetchStorageSize = async () => {
     try {
+      setTotalStorageSize(-1); // Indicator of loading
       const totalSize = await getStorageSizeAction();
       setTotalStorageSize(totalSize);
     } catch (err) {
@@ -188,13 +189,12 @@ export default function GeckoManager() {
       }
     }
     setUploading(false);
-    return [...imageUrls, ...uploadedUrls];
+    return uploadedUrls;
   };
 
   const handleCreateOrUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const newUrls = await uploadImages();
-    // Combine existing uploaded urls with new ones
     const finalUrls = (imageUrls || []).concat(newUrls);
 
     const payload = {
@@ -292,22 +292,25 @@ export default function GeckoManager() {
   const deleteGecko = async (id: string, storedUrls: string[]) => {
     if (!confirm('Na pewno chcesz usunąć tę ofertę?')) return;
     
-    if (storedUrls && storedUrls.length > 0) {
-       for (const url of storedUrls) {
-          const filePath = url.split('/').pop();
-          if (filePath) await supabase.storage.from('geckos').remove([filePath]);
-       }
+    setLoading(true);
+    // Filter out nulls/empty strings before sending to server action
+    const validUrls = (storedUrls || []).filter(url => !!url);
+    
+    const res = await deleteGeckoAction(id, validUrls);
+    
+    if (res.error) {
+      alert('Błąd podczas usuwania: ' + res.error);
     }
-
-    await supabase.from('geckos').delete().eq('id', id);
-    fetchData();
+    
+    await fetchData();
+    setLoading(false);
   };
   
   const removeOldImage = async (index: number) => {
     const url = imageUrls[index];
     if (url) {
        const filePath = url.split('/').pop();
-       if (filePath) await supabase.storage.from('geckos').remove([filePath]);
+       if (filePath) await deleteStorageFileAction(filePath);
     }
     const newUrls = [...imageUrls];
     newUrls.splice(index, 1);
@@ -342,9 +345,18 @@ export default function GeckoManager() {
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-earth-dark/10 shadow-sm h-[44px]">
             <span className="text-[9px] font-black text-earth-dark/40 uppercase tracking-wider whitespace-nowrap">Waga plików:</span>
-            <span className="text-xs font-bold text-earth-dark whitespace-nowrap">
-              {(totalStorageSize / (1024 * 1024)).toFixed(2)} MB
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-bold text-earth-dark whitespace-nowrap ${totalStorageSize === -1 ? 'animate-pulse opacity-50' : ''}`}>
+                {totalStorageSize === -1 ? '...' : (totalStorageSize / (1024 * 1024)).toFixed(2)} MB
+              </span>
+              <button 
+                onClick={(e) => { e.preventDefault(); fetchStorageSize(); }}
+                className={`p-1.5 hover:bg-earth-beige rounded-lg transition-all text-earth-dark/40 hover:text-earth-accent ${totalStorageSize === -1 ? 'animate-spin pointer-events-none' : ''}`}
+                title="Odśwież rozmiar"
+              >
+                <RefreshCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
