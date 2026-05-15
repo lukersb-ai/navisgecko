@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LoaderCircle, Trash2, Edit, Plus, Upload, Eye, EyeOff, Lock, ShieldCheck, Wand2, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react';
-import { updateGeckoOrderAction, reorderAllGeckosAction } from '@/app/actions/geckos';
+import { updateGeckoOrderAction, reorderAllGeckosAction, getStorageSizeAction } from '@/app/actions/geckos';
 import { compressImage } from '@/lib/image-utils';
 import Image from 'next/image';
 
@@ -15,6 +15,7 @@ export default function GeckoManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [visibleCount, setVisibleCount] = useState(15);
+  const [totalStorageSize, setTotalStorageSize] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Form State
@@ -125,12 +126,22 @@ export default function GeckoManager() {
     }
   };
 
+  const fetchStorageSize = async () => {
+    try {
+      const totalSize = await getStorageSizeAction();
+      setTotalStorageSize(totalSize);
+    } catch (err) {
+      console.error('Błąd pobierania rozmiaru magazynu:', err);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     const [geckosRes, catsRes, settingsRes] = await Promise.all([
       supabase.from('geckos').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
       supabase.from('categories').select('*'),
-      supabase.from('app_settings').select('*').eq('id', 'eur_rate').single()
+      supabase.from('app_settings').select('*').eq('id', 'eur_rate').single(),
+      fetchStorageSize()
     ]);
     if (geckosRes.data) setGeckos(geckosRes.data);
     if (catsRes.data) {
@@ -311,6 +322,7 @@ export default function GeckoManager() {
       
       // Update local state as well
       setGeckos(prev => prev.map(g => g.id === editingId ? { ...g, imageUrls: newUrls, imageUrl: newUrls[0] || null } : g));
+      fetchStorageSize();
     }
   }
 
@@ -327,22 +339,29 @@ export default function GeckoManager() {
           <h2 className="text-2xl font-bold text-earth-dark">Menedżer Ofert</h2>
         </div>
         
-        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-earth-dark/10 shadow-sm h-[44px]">
+            <span className="text-[9px] font-black text-earth-dark/40 uppercase tracking-wider whitespace-nowrap">Waga plików:</span>
+            <span className="text-xs font-bold text-earth-dark whitespace-nowrap">
+              {(totalStorageSize / (1024 * 1024)).toFixed(2)} MB
+            </span>
+          </div>
+
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
           <button 
             onClick={handleResetAndAlignOrder}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-earth-dark/10 rounded-xl text-xs font-bold text-earth-dark/60 hover:text-earth-dark hover:border-earth-dark/30 transition-all shadow-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-earth-dark/10 rounded-xl text-[10px] font-bold text-earth-dark/60 hover:text-earth-dark hover:border-earth-dark/30 transition-all shadow-sm h-[44px]"
             title="Wyrównaj numery kolejności (1, 2, 3...)"
           >
-            <RefreshCcw className="w-3.5 h-3.5" />
+            <RefreshCcw className="w-3 h-3" />
             Wyrównaj kolejność
           </button>
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-earth-dark/10 shadow-sm">
-            <span className="text-[10px] font-black text-earth-dark/40 uppercase tracking-wider">Filtruj:</span>
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-earth-dark/10 shadow-sm h-[44px]">
+            <span className="text-[9px] font-black text-earth-dark/40 uppercase tracking-wider">Filtruj:</span>
             <select 
               value={filterCategory} 
               onChange={e => setFilterCategory(e.target.value)}
-              className="bg-transparent border-0 text-sm font-bold focus:outline-none focus:ring-0 text-earth-dark cursor-pointer min-w-[140px]"
+              className="bg-transparent border-0 text-xs font-bold focus:outline-none focus:ring-0 text-earth-dark cursor-pointer min-w-[120px]"
             >
               <option value="all">Wszystkie gatunki</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.namePl}</option>)}
@@ -357,7 +376,7 @@ export default function GeckoManager() {
               }
               setIsQuickEdit(!isQuickEdit);
             }}
-            className={`flex items-center gap-2 px-4 py-3.5 rounded-xl font-black transition-all text-sm shadow-md ${isQuickEdit ? 'bg-orange-100 text-orange-600' : 'bg-white text-earth-dark border border-earth-dark/10'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black transition-all text-[13px] shadow-md h-[44px] ${isQuickEdit ? 'bg-orange-100 text-orange-600' : 'bg-white text-earth-dark border border-earth-dark/10'}`}
           >
             <Edit className="w-4 h-4" />
             {isQuickEdit ? 'Zakończ Edycję' : 'Szybka Edycja'}
@@ -365,9 +384,9 @@ export default function GeckoManager() {
 
           <button
             onClick={() => { resetForm(); setIsAdding(!isAdding); }}
-            className={`flex items-center gap-2 px-8 py-3.5 rounded-xl font-black transition-all text-base shadow-md transform hover:scale-105 active:scale-95 ${isAdding ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-earth-dark text-white hover:bg-earth-main'}`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black transition-all text-sm shadow-md transform hover:scale-105 active:scale-95 h-[44px] ${isAdding ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-earth-dark text-white hover:bg-earth-main'}`}
           >
-            {isAdding ? 'Anuluj' : <><Plus className="w-5 h-5"/> Dodaj Ofertę</>}
+            {isAdding ? 'Anuluj' : <><Plus className="w-4 h-4"/> Dodaj Ofertę</>}
           </button>
 
           {isAdding && (
@@ -375,10 +394,10 @@ export default function GeckoManager() {
               form="gecko-form"
               type="submit"
               disabled={uploading}
-              className="flex items-center gap-2 bg-earth-accent hover:bg-orange-500 text-white px-8 py-3.5 rounded-xl font-black transition-all text-base shadow-md transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              className="flex items-center gap-2 bg-earth-accent hover:bg-orange-500 text-white px-5 py-2.5 rounded-xl font-black transition-all text-sm shadow-md transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none h-[44px]"
             >
               {editingId ? 'Zaktualizuj' : 'Dodaj'}
-              {uploading ? <LoaderCircle className="w-5 h-5 animate-spin"/> : <Plus className="w-5 h-5"/>}
+              {uploading ? <LoaderCircle className="w-4 h-4 animate-spin"/> : <Plus className="w-4 h-4"/>}
             </button>
           )}
         </div>

@@ -150,3 +150,44 @@ export async function reorderAllGeckosAction(updates: { id: string, sort_order: 
     return { error: err.message };
   }
 }
+
+export async function getStorageSizeAction() {
+  // Auth Guard
+  const supabaseServer = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) return 0;
+
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) return 0;
+
+  try {
+    const { data: buckets, error: bucketsError } = await adminClient.storage.listBuckets();
+    if (bucketsError || !buckets) return 0;
+
+    let totalSize = 0;
+
+    const getFolderSize = async (bucketName: string, path: string = ''): Promise<number> => {
+      const { data, error } = await adminClient.storage.from(bucketName).list(path, { limit: 1000 });
+      if (error || !data) return 0;
+      
+      let total = 0;
+      for (const item of data) {
+        if (!item.id || !item.metadata) { // Folder
+          total += await getFolderSize(bucketName, path ? `${path}/${item.name}` : item.name);
+        } else {
+          total += item.metadata.size || 0;
+        }
+      }
+      return total;
+    };
+
+    for (const bucket of buckets) {
+      totalSize += await getFolderSize(bucket.name);
+    }
+
+    return totalSize;
+  } catch (err) {
+    console.error('getStorageSizeAction error:', err);
+    return 0;
+  }
+}
